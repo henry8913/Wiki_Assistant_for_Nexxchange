@@ -3,6 +3,7 @@
 
 #ws-btn{position:fixed;bottom:24px;right:24px;z-index:999999;width:56px;height:56px;border-radius:50%;background:#323232;color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(50,50,50,.3);display:flex;align-items:center;justify-content:center;transition:transform .2s,box-shadow .2s}
 #ws-btn:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(50,50,50,.4)}
+#ws-btn:active{transform:scale(.92)}
 #ws-btn svg{width:26px;height:26px}
 
 #ws-chat{display:none;position:fixed;bottom:92px;right:24px;width:380px;height:580px;max-height:calc(100vh - 120px);background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:999999;flex-direction:column;font-family:Montserrat,Helvetica,Arial,sans-serif;font-size:14px;color:#323232;transform:translateY(12px);opacity:0;transition:transform .25s ease,opacity .25s ease;overflow:hidden}
@@ -49,14 +50,14 @@
 #ws-typing .d{width:6px;height:6px;border-radius:50%;background:#63E0A4;animation:bounce 1.4s infinite}
 #ws-typing .d:nth-child(2){animation-delay:.16s}
 #ws-typing .d:nth-child(3){animation-delay:.32s}
-#ws-typing .t{font-size:12px;color:#fff;margin-left:8px}
+#ws-typing .t{font-size:12px;color:#555;margin-left:8px}
 
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
 /* Full-page chat styles (chat.html) */
 .chat-wrap{flex:1;display:flex;flex-direction:column;position:relative;overflow:hidden;height:100%}
-.chat-bg{position:absolute;inset:0;background-image:url('/img/background.jpg');background-size:cover;background-position:center;opacity:.5;pointer-events:none}
+.chat-bg{position:absolute;inset:0;background:#f0f4f8;background-image:url('/img/background.jpg');background-size:cover;background-position:center;opacity:.5;pointer-events:none}
 .chat-inner{position:relative;z-index:1;flex:1;min-height:0;display:flex;flex-direction:column;max-width:860px;width:100%;margin:0 auto;height:100%}
 .header{background:#323232;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px;flex-shrink:0}
 .header-i{flex:1;min-width:0}.header-t{font-size:16px;font-weight:600;display:block}.header-s{font-size:13px;opacity:.65;display:block;margin-top:2px}
@@ -79,7 +80,7 @@ body.chat-full{height:100dvh;display:flex;flex-direction:column;margin:0}
 /* Shared styles (used by both widget and full-page chat) */
 body{font-family:Montserrat,Helvetica,Arial,sans-serif;color:#323232;margin:0;padding:0}
 .messages,.panel,.typing,.input-area,.input-wrap,.msg,.error-msg,.new-btn,.sess-item,.sess-rename,.sess-del,.rename-inp{box-sizing:border-box}
-.messages{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:24px 20px;display:flex;flex-direction:column;gap:14px}
+.messages{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:24px 20px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth}
 .msg{max-width:85%;padding:12px 16px;border-radius:14px;line-height:1.6;overflow-wrap:break-word;word-wrap:break-word;animation:fadeIn .25s ease}
 .msg.user{background:#79CAF7;color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
 .msg.bot{background:#fff;color:#323232;align-self:flex-start;border-bottom-left-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
@@ -108,7 +109,7 @@ body{font-family:Montserrat,Helvetica,Arial,sans-serif;color:#323232;margin:0;pa
 .typing .d{width:8px;height:8px;border-radius:50%;background:#63E0A4;animation:bounce 1.4s infinite}
 .typing .d:nth-child(2){animation-delay:.16s}
 .typing .d:nth-child(3){animation-delay:.32s}
-.typing .t{font-size:13px;color:#fff;margin-left:8px}
+.typing .t{font-size:13px;color:#555;margin-left:8px}
 .error-msg{display:none;color:#e74c3c;font-size:13px;padding:8px 20px;text-align:center;background:rgba(254,242,242,.7);flex-shrink:0}
 .messages::-webkit-scrollbar{width:6px;background:transparent}
 .messages::-webkit-scrollbar-thumb{background:#ccc;border-radius:4px}
