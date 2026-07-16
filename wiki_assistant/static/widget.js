@@ -9,11 +9,14 @@
   var loading = false;
   var panelsOpen = false;
 
+  function safeSet(key, val) { try { localStorage.setItem(key, val); return true; } catch (e) { return false; } }
+  function safeRemove(key) { try { localStorage.removeItem(key); } catch (e) {} }
+
   var Store = {
     getAll: function () { try { return JSON.parse(localStorage.getItem(STORAGE_SESSIONS)) || []; } catch (e) { return []; } },
-    saveAll: function (l) { localStorage.setItem(STORAGE_SESSIONS, JSON.stringify(l)); },
+    saveAll: function (l) { safeSet(STORAGE_SESSIONS, JSON.stringify(l)); },
     getCurId: function () { return localStorage.getItem(STORAGE_CURRENT) || ''; },
-    setCurId: function (id) { if (id) localStorage.setItem(STORAGE_CURRENT, id); else localStorage.removeItem(STORAGE_CURRENT); },
+    setCurId: function (id) { if (id) safeSet(STORAGE_CURRENT, id); else safeRemove(STORAGE_CURRENT); },
     addSession: function (id, preview) {
       var list = this.getAll();
       list = list.filter(function (s) { return s.id !== id; });
@@ -24,11 +27,11 @@
     renameSession: function (id, name) { var list = this.getAll(); for (var i = 0; i < list.length; i++) { if (list[i].id === id) { list[i].name = name; break; } } this.saveAll(list); },
     removeSession: function (id) {
       this.saveAll(this.getAll().filter(function (s) { return s.id !== id; }));
-      localStorage.removeItem(STORAGE_PREFIX + id);
+      safeRemove(STORAGE_PREFIX + id);
       if (this.getCurId() === id) this.setCurId('');
     },
     getConv: function (id) { try { return JSON.parse(localStorage.getItem(STORAGE_PREFIX + id)) || []; } catch (e) { return []; } },
-    saveConv: function (id, m) { localStorage.setItem(STORAGE_PREFIX + id, JSON.stringify(m)); },
+    saveConv: function (id, m) { safeSet(STORAGE_PREFIX + id, JSON.stringify(m)); },
     addMsgToConv: function (id, role, text) { var msgs = this.getConv(id); msgs.push({ role: role, text: text }); this.saveConv(id, msgs); }
   };
 
@@ -36,6 +39,10 @@
     var link = document.createElement('link');
     link.rel = 'stylesheet'; link.href = BASE_URL + '/static/widget.css';
     document.head.appendChild(link);
+
+    var font = document.createElement('link');
+    font.rel = 'stylesheet'; font.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap';
+    document.head.appendChild(font);
 
     if (document.getElementById('ws-body')) {
       initFullPage();
@@ -60,8 +67,9 @@
       '<button id="ws-hdr-btn" aria-label="Sessioni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>' +
       '<button id="ws-close-btn" aria-label="Chiudi" style="background:rgba(255,255,255,.12);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px">&times;</button></div>' +
       '<div id="ws-panel"><button id="ws-new-btn">+ Nuova chat</button><div id="ws-sess-list"></div></div>' +
-      '<div id="ws-body"><div class="m bot">Ciao! Sono Wiki Assistant di GolfSuite. Come posso aiutarti oggi?</div></div>' +
-      '<div id="ws-typing"><span class="d"></span><span class="d"></span><span class="d"></span><span class="t">Sto cercando nel manuale...</span></div>' +
+'<div id="ws-body"><div class="m bot">Ciao! Sono Wiki Assistant di GolfSuite. Come posso aiutarti oggi?</div></div>' +
+'<button id="ws-scroll-btn" aria-label="Scorri in basso" style="position:absolute;bottom:68px;right:20px;z-index:5;width:36px;height:36px;border-radius:50%;background:#fff;color:#666;border:1px solid #e0e0e0;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>' +
+'<div id="ws-typing"><span class="d"></span><span class="d"></span><span class="d"></span><span class="t">Sto cercando nel manuale...</span></div>' +
       '<div id="ws-err"></div>' +
       '<div id="ws-inp"><input id="ws-inp-field" type="text" placeholder="Scrivi una domanda..." autocomplete="off"><button id="ws-send-btn" aria-label="Invia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>' +
       '</div>';
@@ -80,6 +88,16 @@
       document.getElementById('ws-btn').addEventListener('click', toggle);
       document.getElementById('ws-close-btn').addEventListener('click', toggle);
     }
+    initScrollBtn();
+  }
+
+  function initScrollBtn() {
+    var body = document.getElementById('ws-body'), btn = document.getElementById('ws-scroll-btn');
+    if (!body || !btn) return;
+    body.addEventListener('scroll', function () {
+      btn.classList.toggle('show', body.scrollHeight - body.scrollTop - body.clientHeight > 200);
+    });
+    btn.addEventListener('click', function () { body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' }); });
   }
 
   function loadSessionFromStorage() {
@@ -145,11 +163,25 @@
     label.innerHTML = ''; label.appendChild(inp);
     inp.focus(); inp.select();
     renamingId = id;
-    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') saveRename(id, inp.value); if (e.key === 'Escape') cancelRename(id, inp.getAttribute('data-orig')); });
-    inp.addEventListener('blur', function () { saveRename(id, inp.value); });
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); doSaveRename(id, inp.value); }
+      if (e.key === 'Escape') { e.preventDefault(); doCancelRename(id); }
+    });
+    inp.addEventListener('blur', function () { doSaveRename(id, inp.value); });
   }
-  function saveRename(id, val) { val = val.trim(); if (!val) { cancelRename(id, ''); return; } Store.renameSession(id, val); renamingId = null; renderSessions(); }
-  function cancelRename(id, orig) { renamingId = null; renderSessions(); }
+  function doSaveRename(id, val) {
+    if (renamingId !== id) return;
+    val = val.trim();
+    if (!val) { doCancelRename(id); return; }
+    Store.renameSession(id, val);
+    renamingId = null;
+    renderSessions();
+  }
+  function doCancelRename(id) {
+    if (renamingId !== id) return;
+    renamingId = null;
+    renderSessions();
+  }
 
   function newChat() {
     Store.setCurId('');

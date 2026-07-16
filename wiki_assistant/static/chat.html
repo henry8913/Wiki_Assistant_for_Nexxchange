@@ -3,24 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
 <title>Wiki Assistant - Nexxchange</title>
- <!-- Canonical Links -->
 <link rel="canonical" href="https://wiki-assistant.henrydev.it/chat">
-<link rel="alternate" hreflang="en" href="https://wiki-assistant.henrydev.it/chat">
-<link rel="alternate" hreflang="en" href="https://www.wiki-assistant.henrydev.it/chat">
-<link rel="icon" type="image/png" sizes="32x32" href="https://raw.githubusercontent.com/henry8913/Wiki_Assistant_for_Nexxchange/refs/heads/main/IMG/favicon.png?token=GHSAT0AAAAAAEAEWMKHESPFHPSEQMXZWI3Y2SZB5FQ">
+<link rel="icon" type="image/avif" sizes="32x32" href="/img/favicon.avif">
 <link rel="stylesheet" href="/static/widget.css">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 <!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://wiki-assistant.henrydev.it/chat">
 <meta property="og:title" content="Wiki Assistant - Nexxchange">
 <meta property="og:description" content="Assistente AI per il manuale GolfSuite di Nexxchange. Cerca informazioni, regole e procedure del software gestionale per campi da golf.">
-<meta property="og:image" content="https://raw.githubusercontent.com/henry8913/Wiki_Assistant_for_Nexxchange/refs/heads/main/IMG/1a.png?token=GHSAT0AAAAAAEAEWMKHW2EY6EATLP7OFL5O2SZAZCQ">
+<meta property="og:image" content="https://wiki-assistant.henrydev.it/img/1a.png">
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Wiki Assistant - Nexxchange">
 <meta name="twitter:description" content="Assistente AI per il manuale GolfSuite di Nexxchange. Cerca informazioni, regole e procedure.">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/henry8913/Wiki_Assistant_for_Nexxchange/refs/heads/main/IMG/1a.png?token=GHSAT0AAAAAAEAEWMKHW2EY6EATLP7OFL5O2SZAZCQ">
+<meta name="twitter:image" content="https://wiki-assistant.henrydev.it/img/1a.png">
 </head>
 <body class="chat-full">
 <div class="header">
@@ -34,7 +33,8 @@
     <div class="messages" id="ws-body">
       <div class="msg bot">Ciao! Sono Wiki Assistant di GolfSuite. Come posso aiutarti oggi?</div>
     </div>
-    <div class="typing" id="ws-typing"><span class="d"></span><span class="d"></span><span class="d"></span><span class="t">Sto scrivendo...</span></div>
+    <button id="ws-scroll-btn" class="show" aria-label="Scorri in basso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+    <div class="typing" id="ws-typing"><span class="d"></span><span class="d"></span><span class="d"></span><span class="t">Sto cercando nel manuale...</span></div>
     <div class="error-msg" id="ws-err"></div>
     <div class="input-area">
       <div class="input-wrap">
