@@ -1,27 +1,38 @@
-# Wiki Assistant per Nexxchange GolfSuite
+<p align="center">
+  <img src="IMG/1a.png" alt="Wiki Assistant" width="700">
+</p>
 
-Assistente AI per il manuale GolfSuite, basato su Agno + OpenRouter + pgvector. Accessibile via **widget web**.
+<h1 align="center">Wiki Assistant — Nexxchange GolfSuite</h1>
 
-**Cosa fa:**
-- Risponde a domande sul manuale cercando nella wiki Confluence
-- **Ragiona** sul contenuto — non copia e incolla, ma sintetizza e spiega con logica
-- Alla fine di ogni risposta mostra il **link alla pagina esatta**
-- **Memoria persistente** — ricorda le conversazioni precedenti (PostgreSQL)
-- **Descrizione immagini del wiki** — durante l'indicizzazione, ogni immagine viene descritta da un modello AI e resa ricercabile
-- **Output con immagini** — può restituire immagini nella risposta se utile
-- Conosce il sito aziendale Nexxchange (https://www.nexxchange.com) come contesto
-- Supporta più lingue
+<p align="center">
+  Assistente AI per il manuale GolfSuite · basato su Agno + OpenRouter + pgvector
+</p>
+
+<p align="center">
+  <a href="https://wiki-assistant.henrydev.it/chat">🌐 Provalo ora</a>
+</p>
+
+---
+
+## Cosa fa
+
+- **Cerca nel wiki Confluence** e risponde con parole tue
+- Mostra il **link alla pagina esatta** come fonte
+- **Memoria persistente** — ricorda le conversazioni
+- Supporta **immagini** — descrizioni automatiche delle immagini del wiki
+- Conosce il **sito aziendale Nexxchange** come contesto
+- Multi-lingua
 
 ---
 
 ## Quick Start con Docker
 
-### 1. Prepara le chiavi API
+### 1. Prepara le chiavi
 
 | Cosa ti serve | Dove prenderlo |
 |---|---|
-| OpenRouter API key | https://openrouter.ai/keys |
-| API token Atlassian | https://id.atlassian.com/manage/api-tokens |
+| OpenRouter API key | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| API token Atlassian | [id.atlassian.com/manage/api-tokens](https://id.atlassian.com/manage/api-tokens) |
 
 ### 2. Configura
 
@@ -30,15 +41,13 @@ cp .env.example .env
 # Modifica .env con le tue chiavi
 ```
 
-### 3. Avvia tutto
+### 3. Avvia
 
 ```bash
 docker compose up -d
 ```
 
-Avvia automaticamente: **PostgreSQL** e **il bot**.
-
-### 4. Ingerisci il wiki (una volta sola)
+### 4. Ingerisci il wiki
 
 ```bash
 docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest
@@ -54,17 +63,11 @@ docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest_website
 
 ## Accesso
 
-### Widget web (pagina intera)
-```
-https://wiki-assistant.henrydev.it/chat
-```
-
+### Widget web — [wiki-assistant.henrydev.it/chat](https://wiki-assistant.henrydev.it/chat)
 Chat a pagina intera con sfondo brand Nexxchange.
 
-### Widget fluttuante (consigliato)
-Pulsante in basso a destra, si apre la chat senza coprire la pagina.
-
-Inserisci in una pagina HTML:
+### Widget fluttuante
+Pulsante in basso a destra, si apre senza coprire la pagina.
 
 ```html
 <div id="ws-chat-widget"></div>
@@ -76,21 +79,21 @@ Inserisci in una pagina HTML:
 ## Comandi Docker
 
 ```bash
-# Log del bot
+# Log
 docker compose logs -f bot
 
-# Ricostruisci (dopo modifiche al codice)
+# Ricostruisci
 docker compose up --build -d
 
 # Ingerisci spazi specifici
 docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest --spaces "GOLIT"
 
-# Ingerisci sito Nexxchange
+# Ingerisci sito
 docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest_website
 
 # Ferma tutto
 docker compose down
 
-# Ferma tutto e cancella il database
+# Ferma e cancella db
 docker compose down -v
 ```
