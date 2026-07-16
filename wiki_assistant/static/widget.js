@@ -247,45 +247,31 @@
     addMsg(text, 'user', Date.now());
     showTyping(true);
     showError('');
-    var sid = Store.getCurId(), retries = 0, botTs = Date.now();
-    var streamMsg = null, streamText = '';
+    var sid = Store.getCurId(), retries = 0;
 
     function attempt() {
       var xhr = new XMLHttpRequest();
       xhr.open('POST', BASE_URL + '/agents/' + AGENT_ID + '/runs', true);
       xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 
-      xhr.onreadystatechange = function () {
-        if (xhr.readyState >= 3) {
-          var data = parseSSE(xhr.responseText);
-          if (data.content && data.content !== streamText) {
-            streamText = data.content;
-            if (streamMsg === null) {
-              showTyping(false);
-              streamMsg = addMsg(streamText, 'bot', botTs);
-            } else {
-              streamMsg.innerHTML = renderMarkdown(streamText) + '<div class="m-t">' + formatTime(botTs) + '</div>';
-            }
-            addCopyButtons(streamMsg);
-          }
-          if (data.session_id && streamText) {
-            Store.setCurId(data.session_id);
-            Store.addSession(data.session_id, text);
-            Store.addMsgToConv(data.session_id, 'user', text, Date.now());
-            Store.addMsgToConv(data.session_id, 'bot', streamText, botTs);
-            renderSessions();
-          }
-        }
-        if (xhr.readyState === 4) {
+      xhr.onload = function () {
+        if (xhr.status === 200) {
+          var result = parseSSE(xhr.responseText);
           showTyping(false);
-          if (xhr.status !== 200) {
-            if (retries < MAX_RETRIES) { retries++; setTimeout(attempt, RETRY_DELAY); }
-            else showError('Errore di connessione. Riprova.');
-          } else if (!streamText) {
-            addMsg('Scusa, non ho trovato informazioni. Prova a riformulare.', 'bot', Date.now());
-          }
-        }
+          if (result.content) {
+            addMsg(result.content, 'bot', Date.now());
+            if (result.session_id) {
+              Store.setCurId(result.session_id);
+              Store.addSession(result.session_id, text);
+              Store.addMsgToConv(result.session_id, 'user', text, Date.now());
+              Store.addMsgToConv(result.session_id, 'bot', result.content, Date.now());
+              renderSessions();
+            }
+          } else addMsg('Scusa, non ho trovato informazioni. Prova a riformulare.', 'bot', Date.now());
+        } else if (retries < MAX_RETRIES) { retries++; setTimeout(attempt, RETRY_DELAY); }
+        else { showTyping(false); showError('Errore di connessione. Riprova.'); }
       };
+      xhr.onerror = function () { if (retries < MAX_RETRIES) { retries++; setTimeout(attempt, RETRY_DELAY); } else { showTyping(false); showError('Errore di connessione. Riprova.'); } };
       xhr.onerror = function () { if (retries < MAX_RETRIES) { retries++; setTimeout(attempt, RETRY_DELAY); } else { showTyping(false); showError('Errore di connessione. Riprova.'); } };
       var params = 'message=' + encodeURIComponent(text);
       if (sid) params += '&session_id=' + encodeURIComponent(sid);
