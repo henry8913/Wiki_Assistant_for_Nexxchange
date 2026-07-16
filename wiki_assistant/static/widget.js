@@ -32,7 +32,7 @@
     },
     getConv: function (id) { try { return JSON.parse(localStorage.getItem(STORAGE_PREFIX + id)) || []; } catch (e) { return []; } },
     saveConv: function (id, m) { safeSet(STORAGE_PREFIX + id, JSON.stringify(m)); },
-    addMsgToConv: function (id, role, text) { var msgs = this.getConv(id); msgs.push({ role: role, text: text }); this.saveConv(id, msgs); }
+    addMsgToConv: function (id, role, text, ts) { var msgs = this.getConv(id); msgs.push({ role: role, text: text, ts: ts || Date.now() }); this.saveConv(id, msgs); }
   };
 
   function init() {
@@ -67,8 +67,9 @@
       '<button id="ws-hdr-btn" aria-label="Sessioni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>' +
       '<button id="ws-close-btn" aria-label="Chiudi" style="background:rgba(255,255,255,.12);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px">&times;</button></div>' +
       '<div id="ws-panel"><button id="ws-new-btn">+ Nuova chat</button><div id="ws-sess-list"></div></div>' +
-'<div id="ws-body"><div class="m bot">Ciao! Sono Wiki Assistant di GolfSuite. Come posso aiutarti oggi?</div></div>' +
-'<div id="ws-typing"><span class="d"></span><span class="d"></span><span class="d"></span><span class="t">Sto cercando nel manuale...</span></div>' +
+      '<div id="ws-body"><div class="m bot">Ciao! Sono Wiki Assistant di GolfSuite. Come posso aiutarti oggi?</div></div>' +
+      '<button id="ws-scroll-btn" aria-label="Scorri in basso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>' +
+      '<div id="ws-typing"><span class="d"></span><span class="d"></span><span class="d"></span><span class="t">Sto cercando nel manuale...</span></div>' +
       '<div id="ws-err"></div>' +
       '<div id="ws-inp"><input id="ws-inp-field" type="text" placeholder="Scrivi una domanda..." autocomplete="off"><button id="ws-send-btn" aria-label="Invia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>' +
       '</div>';
@@ -87,6 +88,16 @@
       document.getElementById('ws-btn').addEventListener('click', toggle);
       document.getElementById('ws-close-btn').addEventListener('click', toggle);
     }
+    initScrollBtn();
+  }
+
+  function initScrollBtn() {
+    var body = document.getElementById('ws-body'), btn = document.getElementById('ws-scroll-btn');
+    if (!body || !btn) return;
+    function check() { btn.classList.toggle('show', body.scrollHeight - body.scrollTop - body.clientHeight > 150); }
+    body.addEventListener('scroll', check);
+    btn.addEventListener('click', function () { body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' }); });
+    check();
   }
 
   function loadSessionFromStorage() {
@@ -97,10 +108,7 @@
         var body = document.getElementById('ws-body');
         body.innerHTML = '';
         for (var i = 0; i < msgs.length; i++) {
-          var div = document.createElement('div');
-          div.className = 'm ' + msgs[i].role;
-          div.innerHTML = msgs[i].role === 'bot' ? renderMarkdown(msgs[i].text) : escHtml(msgs[i].text);
-          body.appendChild(div);
+          body.appendChild(renderMsg(msgs[i].role, msgs[i].text, msgs[i].ts));
         }
         if (body.lastChild) body.lastChild.scrollIntoView({ block: 'end' });
       }
@@ -187,10 +195,7 @@
     if (msgs.length === 0) body.innerHTML = '<div class="m bot">Ciao! Sono Wiki Assistant di GolfSuite. Come posso aiutarti oggi?</div>';
     else {
       for (var i = 0; i < msgs.length; i++) {
-        var div = document.createElement('div');
-        div.className = 'm ' + msgs[i].role;
-        div.innerHTML = msgs[i].role === 'bot' ? renderMarkdown(msgs[i].text) : escHtml(msgs[i].text);
-        body.appendChild(div);
+        body.appendChild(renderMsg(msgs[i].role, msgs[i].text, msgs[i].ts));
       }
       if (body.lastChild) body.lastChild.scrollIntoView({ block: 'end' });
     }
@@ -201,34 +206,96 @@
 
   function deleteSession(id) { var cur = Store.getCurId(); Store.removeSession(id); if (cur === id) newChat(); else renderSessions(); }
 
+  function formatTime(ts) {
+    if (!ts) return '';
+    var diff = (Date.now() - ts) / 1000;
+    if (diff < 5) return 'ora';
+    if (diff < 60) return Math.round(diff) + 's';
+    if (diff < 3600) return Math.round(diff / 60) + 'min';
+    if (diff < 86400) return Math.round(diff / 3600) + 'h';
+    return new Date(ts).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+  }
+
+  function renderMsg(role, text, ts) {
+    var div = document.createElement('div');
+    div.className = 'm ' + role;
+    div.innerHTML = (role === 'bot' ? renderMarkdown(text) : escHtml(text)) + '<div class="m-t">' + formatTime(ts) + '</div>';
+    if (role === 'bot') addCopyButtons(div);
+    return div;
+  }
+
+  function addCopyButtons(el) {
+    var blocks = el.querySelectorAll('pre');
+    blocks.forEach(function (pre) {
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.textContent = 'Copia';
+      pre.style.position = 'relative';
+      pre.appendChild(btn);
+      btn.addEventListener('click', function () {
+        var code = pre.querySelector('code');
+        if (!code) return;
+        navigator.clipboard.writeText(code.textContent).then(function () {
+          btn.textContent = 'Copiato!';
+          btn.classList.add('copied');
+          setTimeout(function () { btn.textContent = 'Copia'; btn.classList.remove('copied'); }, 2000);
+        });
+      });
+    });
+  }
+
+  function addMsg(text, role, ts) {
+    var body = document.getElementById('ws-body'), div = renderMsg(role, text, ts);
+    body.appendChild(div);
+    div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    return div;
+  }
+
   function send() {
     var input = document.getElementById('ws-inp-field'), text = input.value.trim();
     if (!text || loading) return;
     input.value = '';
-    addMsg(text, 'user');
+    addMsg(text, 'user', Date.now());
     showTyping(true);
     showError('');
-    var sid = Store.getCurId(), retries = 0;
+    var sid = Store.getCurId(), retries = 0, botTs = Date.now();
+    var streamMsg = null, streamText = '';
+
     function attempt() {
       var xhr = new XMLHttpRequest();
       xhr.open('POST', BASE_URL + '/agents/' + AGENT_ID + '/runs', true);
       xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-      xhr.onload = function () {
-        if (xhr.status === 200) {
-          var result = parseSSE(xhr.responseText);
+
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState >= 3 && streamMsg === null) {
           showTyping(false);
-          if (result.content) {
-            addMsg(result.content, 'bot');
-            if (result.session_id) {
-              Store.setCurId(result.session_id);
-              Store.addSession(result.session_id, text);
-              Store.addMsgToConv(result.session_id, 'user', text);
-              Store.addMsgToConv(result.session_id, 'bot', result.content);
-              renderSessions();
-            }
-          } else addMsg('Scusa, non ho trovato informazioni. Prova a riformulare.', 'bot');
-        } else if (retries < MAX_RETRIES) { retries++; setTimeout(attempt, RETRY_DELAY); }
-        else { showTyping(false); showError('Errore di connessione. Riprova.'); }
+          streamMsg = addMsg('', 'bot', botTs);
+        }
+        if (xhr.readyState >= 3) {
+          var data = parseSSE(xhr.responseText);
+          if (data.content && data.content !== streamText) {
+            streamText = data.content;
+            streamMsg.innerHTML = renderMarkdown(streamText) + '<div class="m-t">' + formatTime(botTs) + '</div>';
+            streamMsg.scrollIntoView({ behavior: 'smooth', block: 'end' });
+          }
+          if (data.session_id) {
+            if (streamMsg) addCopyButtons(streamMsg);
+            Store.setCurId(data.session_id);
+            Store.addSession(data.session_id, text);
+            Store.addMsgToConv(data.session_id, 'user', text, Date.now());
+            Store.addMsgToConv(data.session_id, 'bot', streamText || data.content, botTs);
+            renderSessions();
+          }
+        }
+        if (xhr.readyState === 4) {
+          showTyping(false);
+          if (xhr.status !== 200) {
+            if (retries < MAX_RETRIES) { retries++; setTimeout(attempt, RETRY_DELAY); }
+            else showError('Errore di connessione. Riprova.');
+          } else if (!streamText) {
+            addMsg('Scusa, non ho trovato informazioni. Prova a riformulare.', 'bot', Date.now());
+          }
+        }
       };
       xhr.onerror = function () { if (retries < MAX_RETRIES) { retries++; setTimeout(attempt, RETRY_DELAY); } else { showTyping(false); showError('Errore di connessione. Riprova.'); } };
       var params = 'message=' + encodeURIComponent(text);
@@ -243,19 +310,12 @@
     var lines = raw.split('\n');
     for (var i = 0; i < lines.length; i++) {
       if (lines[i].startsWith('data: ')) {
-        try { var d = JSON.parse(lines[i].slice(6)); if (d.event === 'RunCompleted') { if (d.content) result.content = d.content.trim(); if (d.session_id) result.session_id = d.session_id; } } catch (_) {}
+        try { var d = JSON.parse(lines[i].slice(6)); if (d.event && d.event.toLowerCase().indexOf('runcompleted') >= 0 || d.event && d.event.toLowerCase().indexOf('complete') >= 0) { if (d.content) result.content = d.content.trim(); if (d.session_id) result.session_id = d.session_id; } } catch (_) {}
       }
     }
     return result;
   }
 
-  function addMsg(text, role) {
-    var body = document.getElementById('ws-body'), div = document.createElement('div');
-    div.className = 'm ' + role;
-    div.innerHTML = role === 'bot' ? renderMarkdown(text) : escHtml(text);
-    body.appendChild(div);
-    div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }
   function showTyping(show) { loading = show; document.getElementById('ws-typing').style.display = show ? 'flex' : 'none'; document.getElementById('ws-send-btn').disabled = show; }
   function showError(msg) { var el = document.getElementById('ws-err'); el.textContent = msg; el.style.display = msg ? 'block' : 'none'; }
   function escHtml(t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }

@@ -43,6 +43,11 @@
 #ws-body .m.bot pre{background:#e8edf2;padding:10px;border-radius:8px;overflow-x:auto;font-size:13px;margin:6px 0;white-space:pre-wrap;word-break:break-word}
 #ws-body .m.bot img{max-width:100%;border-radius:8px;margin:6px 0;display:block;border:1px solid #eee}
 #ws-body .m.bot p{margin:4px 0}
+#ws-body .m-t{font-size:10px;color:#999;margin-top:4px;text-align:right;line-height:1}
+.copy-btn{position:absolute;top:4px;right:4px;padding:3px 8px;font-size:11px;border:none;border-radius:4px;background:#e0e0e0;color:#555;cursor:pointer;opacity:0;transition:opacity .2s,background .2s}
+pre:hover .copy-btn{opacity:1}
+.copy-btn:hover{background:#79CAF7;color:#fff}
+.copy-btn.copied{background:#63E0A4;color:#fff}
 #ws-body::-webkit-scrollbar{width:4px}
 #ws-body::-webkit-scrollbar-thumb{background:#ccc;border-radius:4px}
 
@@ -113,6 +118,10 @@ body{font-family:Montserrat,Helvetica,Arial,sans-serif;color:#323232;margin:0;pa
 .error-msg{display:none;color:#e74c3c;font-size:13px;padding:8px 20px;text-align:center;background:rgba(254,242,242,.7);flex-shrink:0}
 .messages::-webkit-scrollbar{width:6px;background:transparent}
 .messages::-webkit-scrollbar-thumb{background:#ccc;border-radius:4px}
+#ws-scroll-btn{display:none;position:absolute;bottom:70px;right:24px;z-index:5;width:34px;height:34px;border-radius:50%;background:#fff;color:#666;border:1px solid #e0e0e0;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.1);align-items:center;justify-content:center;transition:opacity .2s}
+#ws-scroll-btn.show{display:flex}
+#ws-scroll-btn:hover{color:#79CAF7;border-color:#79CAF7}
+#ws-scroll-btn svg{width:15px;height:15px}
 
 .input-area{display:flex;gap:10px;padding:14px 20px;background:transparent;flex-shrink:0;justify-content:center}
 .input-wrap{display:flex;gap:10px;max-width:800px;width:100%}
