@@ -236,7 +236,7 @@
   function addMsg(text, role, ts) {
     var body = document.getElementById('ws-body'), div = renderMsg(role, text, ts);
     body.appendChild(div);
-    div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    div.scrollIntoView({ behavior: 'smooth', block: 'start' });
     return div;
   }
 
@@ -265,7 +265,7 @@
           if (data.content && data.content !== streamText) {
             streamText = data.content;
             streamMsg.innerHTML = renderMarkdown(streamText) + '<div class="m-t">' + formatTime(botTs) + '</div>';
-            streamMsg.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            streamMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
           if (data.session_id) {
             if (streamMsg) addCopyButtons(streamMsg);
