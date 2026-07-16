@@ -258,7 +258,10 @@
       xhr.onreadystatechange = function () {
         if (xhr.readyState >= 3 && streamMsg === null) {
           showTyping(false);
-          streamMsg = addMsg('', 'bot', botTs);
+          var body = document.getElementById('ws-body');
+          streamMsg = document.createElement('div');
+          streamMsg.className = 'm bot';
+          body.appendChild(streamMsg);
           streamMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
         if (xhr.readyState >= 3) {
