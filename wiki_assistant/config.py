@@ -3,10 +3,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Telegram
-TELEGRAM_TOKEN: str = os.getenv("TELEGRAM_TOKEN", "")
-TELEGRAM_WEBHOOK_SECRET_TOKEN: str = os.getenv("TELEGRAM_WEBHOOK_SECRET_TOKEN", "")
-
 # OpenRouter
 OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o")

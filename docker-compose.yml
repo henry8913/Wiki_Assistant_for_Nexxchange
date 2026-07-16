@@ -30,7 +30,6 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql+psycopg://ai:ai@db:5432/ai
-      WEBHOOK_DOMAIN: ${WEBHOOK_DOMAIN}
     ports:
       - "7777:7777"
     entrypoint: ["/app/entrypoint.sh"]

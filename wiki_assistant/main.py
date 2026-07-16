@@ -5,10 +5,9 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse
 
 from agno.os.app import AgentOS
-from agno.os.interfaces.telegram import Telegram
 
 from wiki_assistant.agent import get_agent
-from wiki_assistant.config import APP_ENV, HOST, PORT, TELEGRAM_TOKEN
+from wiki_assistant.config import APP_ENV, HOST, PORT
 from wiki_assistant.db import session_db
 from wiki_assistant.knowledge import get_wiki_knowledge
 
@@ -22,13 +21,6 @@ knowledge = get_wiki_knowledge()
 agent_os = AgentOS(
     agents=[agent],
     knowledge=[knowledge],
-    interfaces=[
-        Telegram(
-            agent=agent,
-            token=TELEGRAM_TOKEN,
-            streaming=True,
-        )
-    ],
 )
 
 app = agent_os.get_app()
