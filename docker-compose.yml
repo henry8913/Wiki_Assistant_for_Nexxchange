@@ -16,17 +16,6 @@ services:
       timeout: 5s
       retries: 5
 
-  ngrok:
-    image: ngrok/ngrok:latest
-    restart: unless-stopped
-    environment:
-      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
-    command: http bot:7777 --host-header=localhost
-    ports:
-      - "4040:4040"
-    depends_on:
-      - bot
-
   bot:
     build:
       context: .
@@ -38,6 +27,7 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql+psycopg://ai:ai@db:5432/ai
+      WEBHOOK_DOMAIN: ${WEBHOOK_DOMAIN}
     ports:
       - "7777:7777"
     entrypoint: ["/app/entrypoint.sh"]
