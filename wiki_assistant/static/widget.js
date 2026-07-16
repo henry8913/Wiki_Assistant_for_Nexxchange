@@ -256,26 +256,23 @@
       xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 
       xhr.onreadystatechange = function () {
-        if (xhr.readyState >= 3 && streamMsg === null) {
-          showTyping(false);
-          var body = document.getElementById('ws-body');
-          streamMsg = document.createElement('div');
-          streamMsg.className = 'm bot';
-          body.appendChild(streamMsg);
-          streamMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
         if (xhr.readyState >= 3) {
           var data = parseSSE(xhr.responseText);
           if (data.content && data.content !== streamText) {
             streamText = data.content;
-            streamMsg.innerHTML = renderMarkdown(streamText) + '<div class="m-t">' + formatTime(botTs) + '</div>';
+            if (streamMsg === null) {
+              showTyping(false);
+              streamMsg = addMsg(streamText, 'bot', botTs);
+            } else {
+              streamMsg.innerHTML = renderMarkdown(streamText) + '<div class="m-t">' + formatTime(botTs) + '</div>';
+            }
+            addCopyButtons(streamMsg);
           }
-          if (data.session_id) {
-            if (streamMsg) addCopyButtons(streamMsg);
+          if (data.session_id && streamText) {
             Store.setCurId(data.session_id);
             Store.addSession(data.session_id, text);
             Store.addMsgToConv(data.session_id, 'user', text, Date.now());
-            Store.addMsgToConv(data.session_id, 'bot', streamText || data.content, botTs);
+            Store.addMsgToConv(data.session_id, 'bot', streamText, botTs);
             renderSessions();
           }
         }
