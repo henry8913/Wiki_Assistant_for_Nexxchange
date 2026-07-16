@@ -68,7 +68,7 @@
       '<button id="ws-close-btn" aria-label="Chiudi" style="background:rgba(255,255,255,.12);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px">&times;</button></div>' +
       '<div id="ws-panel"><button id="ws-new-btn">+ Nuova chat</button><div id="ws-sess-list"></div></div>' +
       '<div id="ws-body"><div class="m bot">Ciao! Sono Wiki Assistant di GolfSuite. Come posso aiutarti oggi?</div></div>' +
-      '<div id="ws-typing"><span class="d"></span><span class="d"></span><span class="d"></span><span class="t">Sto cercando nel manuale...</span></div>' +
+      '<div id="ws-typing"><span class="d"></span><span class="d"></span><span class="d"></span><span class="t">Sto scrivendo...</span></div>' +
       '<div id="ws-err"></div>' +
       '<div id="ws-inp"><input id="ws-inp-field" type="text" placeholder="Scrivi una domanda..." autocomplete="off"><button id="ws-send-btn" aria-label="Invia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>' +
       '</div>';
