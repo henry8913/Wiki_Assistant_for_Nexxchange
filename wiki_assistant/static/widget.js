@@ -99,7 +99,7 @@
         for (var i = 0; i < msgs.length; i++) {
           body.appendChild(renderMsg(msgs[i].role, msgs[i].text, msgs[i].ts));
         }
-        if (body.lastChild) body.lastChild.scrollIntoView({ block: 'end' });
+        if (body.lastChild) body.lastChild.scrollIntoView({ block: 'start' });
       }
     }
   }
@@ -186,7 +186,7 @@
       for (var i = 0; i < msgs.length; i++) {
         body.appendChild(renderMsg(msgs[i].role, msgs[i].text, msgs[i].ts));
       }
-      if (body.lastChild) body.lastChild.scrollIntoView({ block: 'end' });
+      if (body.lastChild) body.lastChild.scrollIntoView({ block: 'start' });
     }
     document.getElementById('ws-panel').classList.remove('open'); panelsOpen = false;
     renderSessions();
