@@ -72,7 +72,7 @@ pre:hover .copy-btn{opacity:1}
 body.chat-full{height:100dvh;display:flex;flex-direction:column;margin:0}
 
 #ws-inp{display:flex;gap:8px;padding:12px 16px;background:transparent;flex-shrink:0}
-#ws-inp input{flex:1;padding:9px 16px;border:1.5px solid #e0e0e0;border-radius:22px;outline:none;font-size:16px;transition:border-color .2s;font-family:Montserrat,Helvetica,sans-serif}
+#ws-inp input{flex:1;padding:9px 16px;border:1.5px solid #e0e0e0;border-radius:22px;outline:none;font-size:16px;transition:border-color .2s;font-family:Montserrat,Helvetica,sans-serif;touch-action:pan-y}
 #ws-inp input:focus{border-color:#79CAF7}
 #ws-inp button{width:38px;height:38px;border-radius:50%;border:none;background:#79CAF7;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s,transform .1s}
 #ws-inp button:hover{background:#5db8e8}
@@ -121,7 +121,7 @@ body{font-family:Montserrat,Helvetica,Arial,sans-serif;color:#323232;margin:0;pa
 
 .input-area{display:flex;gap:10px;padding:14px 20px;background:transparent;flex-shrink:0;justify-content:center}
 .input-wrap{display:flex;gap:10px;max-width:800px;width:100%}
-.input-wrap input{flex:1;padding:11px 18px;border:1.5px solid #e0e0e0;border-radius:24px;outline:none;font-size:16px;font-family:Montserrat,Helvetica,sans-serif;transition:border-color .2s}
+.input-wrap input{flex:1;padding:11px 18px;border:1.5px solid #e0e0e0;border-radius:24px;outline:none;font-size:16px;font-family:Montserrat,Helvetica,sans-serif;transition:border-color .2s;touch-action:pan-y}
 .input-wrap input:focus{border-color:#79CAF7}
 .input-wrap button{width:42px;height:42px;border-radius:50%;border:none;background:#79CAF7;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .input-wrap button:hover{background:#5db8e8}
