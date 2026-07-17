@@ -14,22 +14,20 @@ Wiki Assistant è un assistente AI che risponde a qualsiasi domanda sul manuale 
 
 ## Indice
 
-- [Architettura](#architettura)
-- [Stack tecnologico](#stack-tecnologico)
-- [Struttura del progetto](#struttura-del-progetto)
-- [Come funziona](#come-funziona)
-- [Variabili d'ambiente](#variabili-dambiente)
-- [Setup con Docker](#setup-con-docker)
-- [Sviluppo locale](#sviluppo-locale)
-- [Accesso](#accesso)
-- [Deploy automatico](#deploy-automatico)
-- [Comandi Docker](#comandi-docker)
-- [Contribuire](#contribuire)
-- [Licenza](#licenza)
+- [🏗️ Architettura](#architettura)
+- [🛠️ Stack tecnologico](#stack-tecnologico)
+- [📁 Struttura del progetto](#struttura-del-progetto)
+- [🤖 Come funziona](#come-funziona)
+- [🔑 Variabili d'ambiente](#variabili-dambiente)
+- [🐳 Setup con Docker](#setup-con-docker)
+- [💻 Sviluppo locale](#sviluppo-locale)
+- [🌐 Accesso](#accesso)
+- [🚀 Deploy automatico](#deploy-automatico)
+- [⚙️ Comandi Docker](#comandi-docker)
 
 ---
 
-## Architettura
+## 🏗️ Architettura
 
 Wiki Assistant implementa una pipeline **RAG (Retrieval-Augmented Generation)**:
 
@@ -47,7 +45,7 @@ User  ──>  Chat UI  ──>  FastAPI  ──>  Agno Agent  ──>  Retrieva
 
 ---
 
-## Stack tecnologico
+## 🛠️ Stack tecnologico
 
 | Componente | Tecnologia | Ruolo |
 |---|---|---|
@@ -63,7 +61,7 @@ User  ──>  Chat UI  ──>  FastAPI  ──>  Agno Agent  ──>  Retrieva
 
 ---
 
-## Struttura del progetto
+## 📁 Struttura del progetto
 
 ```
 wiki_assistant/
@@ -95,7 +93,7 @@ entrypoint.sh                 # Entrypoint container bot
 
 ---
 
-## Come funziona
+## 🤖 Come funziona
 
 ### Agente (agent.py)
 
@@ -128,7 +126,7 @@ Crawler BFS separato che scansiona `https://www.nexxchange.com` (max 30 pagine) 
 
 ---
 
-## Variabili d'ambiente
+## 🔑 Variabili d'ambiente
 
 | Variabile | Obbligatoria | Descrizione |
 |---|---|---|
@@ -145,7 +143,7 @@ Crawler BFS separato che scansiona `https://www.nexxchange.com` (max 30 pagine) 
 
 ---
 
-## Setup con Docker
+## 🐳 Setup con Docker
 
 **Prerequisiti:** Docker e Docker Compose installati.
 
@@ -185,7 +183,7 @@ L'applicazione sarà disponibile su `http://localhost:7777/chat`.
 
 ---
 
-## Sviluppo locale
+## 💻 Sviluppo locale
 
 **Prerequisiti:** Python 3.12+, PostgreSQL con pgvector.
 
@@ -219,7 +217,7 @@ python -m wiki_assistant.ingest.run_ingest
 
 ---
 
-## Accesso
+## 🌐 Accesso
 
 ### Chat a pagina intera — [wiki-assistant.henrydev.it/chat](https://wiki-assistant.henrydev.it/chat)
 
@@ -238,7 +236,7 @@ Il widget appare in basso a destra e si apre senza coprire il contenuto della pa
 
 ---
 
-## Deploy automatico
+## 🚀 Deploy automatico
 
 A ogni push sul branch `main`, GitHub Actions esegue il deploy sul server di produzione:
 
@@ -253,7 +251,7 @@ Il server è un Oracle Linux con Nginx Proxy Manager che fa da reverse proxy per
 
 ---
 
-## Comandi Docker
+## ⚙️ Comandi Docker
 
 ```bash
 # Log in tempo reale
