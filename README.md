@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="IMG/1a.png" alt="Wiki Assistant" width="700">
+  <img src="IMG/1a.png" alt="Wiki Assistant" width="100%">
 </p>
 
 <h1 align="center">Wiki Assistant — Nexxchange GolfSuite</h1>
 
 <p align="center">
-  Assistente AI per il manuale GolfSuite · basato su Agno + OpenRouter + pgvector
+  Domande sul manuale GolfSuite? Parla con Wiki Assistant.
 </p>
 
 <p align="center">
@@ -22,6 +22,14 @@
 - Supporta **immagini** — descrizioni automatiche delle immagini del wiki
 - Conosce il **sito aziendale Nexxchange** come contesto
 - Multi-lingua
+
+---
+
+## Stack
+
+<p align="center">
+  Agno · OpenRouter · pgvector · FastAPI · PostgreSQL · Docker
+</p>
 
 ---
 
