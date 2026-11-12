@@ -37,9 +37,38 @@ def _chunk_and_insert(page: WikiPage, text: str):
     )
 
 
-def ingest_all(pages_by_space: dict[str, list[WikiPage]]):
+def _stored_version(kb, page_id: str):
+    """Return the version of a page already stored in the vector DB, if any."""
+    from sqlalchemy import select
+
+    table = kb.vector_db.table
+    try:
+        with kb.vector_db.Session() as sess:
+            rows = sess.execute(
+                select(table.c.meta_data)
+                .where(table.c.meta_data.contains({"page_id": page_id}))
+                .limit(1)
+            ).fetchall()
+        if rows:
+            return (rows[0][0] or {}).get("version")
+    except Exception as exc:
+        print(f"  (version check error: {exc})")
+    return None
+
+
+def _delete_page_vectors(kb, page_id: str):
+    """Remove all vectors tied to a page before re-inserting an updated version."""
+    try:
+        kb.vector_db.delete_by_metadata({"page_id": page_id})
+    except Exception as exc:
+        print(f"  (delete error: {exc})")
+
+
+def ingest_all(pages_by_space: dict[str, list[WikiPage]], force: bool = False):
     total = sum(len(pages) for pages in pages_by_space.values())
     processed = 0
+    updated = 0
+    skipped = 0
 
     for space_key, pages in pages_by_space.items():
         print(f"\nIngesting space: {space_key} ({len(pages)} pages)")
@@ -49,6 +78,21 @@ def ingest_all(pages_by_space: dict[str, list[WikiPage]]):
             print(f"  [{processed}/{total}] {page.title}... ", end="", flush=True)
 
             try:
+                kb = get_wiki_knowledge()
+                stored_version = _stored_version(kb, page.id)
+
+                if not force and stored_version is not None:
+                    try:
+                        if int(stored_version) >= int(page.version):
+                            print("up to date")
+                            skipped += 1
+                            continue
+                    except (TypeError, ValueError):
+                        pass
+
+                if stored_version is not None or force:
+                    _delete_page_vectors(kb, page.id)
+
                 text = _page_to_text(page)
                 if not text.strip():
                     print("skipped (empty)")
@@ -64,32 +108,41 @@ def ingest_all(pages_by_space: dict[str, list[WikiPage]]):
                 for img_path, original_url in image_paths:
                     try:
                         description = describe_image(img_path)
-                        kb = get_wiki_knowledge()
                         kb.insert(
                             name=f"{page.title} — {img_path.name}",
                             text_content=description,
                             metadata={
                                 "source_url": page.source_url,
+                                "page_id": page.id,
                                 "image_url": original_url,
                                 "type": "image_description",
                                 "page_title": page.title,
+                                "version": page.version,
                             },
                             skip_if_exists=True,
                         )
                     except Exception as img_err:
                         print(f"  (image error: {img_err})")
 
-                print("ok")
+                updated += 1
+                print("ok" + (" (updated)" if stored_version is not None else ""))
             except Exception as e:
                 print(f"error: {e}")
 
-    print(f"\nIngestion complete. {processed} pages processed.")
+    print(
+        f"\nIngestion complete. {processed} pages processed "
+        f"({updated} inserted/updated, {skipped} unchanged)."
+    )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ingest Confluence wiki into knowledge base")
     parser.add_argument("--spaces", type=str, help="Comma-separated space keys (overrides env)")
-    parser.add_argument("--skip-if-exists", action="store_true", default=True)
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-embed every page even if its version is unchanged",
+    )
     args = parser.parse_args()
 
     if args.spaces:
@@ -102,6 +155,6 @@ if __name__ == "__main__":
     crawler = ConfluenceCrawler()
     try:
         pages_by_space = crawler.get_all_pages_for_all_spaces()
-        ingest_all(pages_by_space)
+        ingest_all(pages_by_space, force=args.force)
     finally:
         crawler.close()

@@ -211,7 +211,18 @@ class ConfluenceCrawler:
         result: dict[str, list[WikiPage]] = {}
         for space_key in WIKI_SPACES:
             print(f"Crawling space: {space_key}")
-            pages = self.get_all_pages(space_key)
+            try:
+                pages = self.get_all_pages(space_key)
+            except httpx.HTTPStatusError as exc:
+                status = exc.response.status_code
+                if status in (403, 404):
+                    print(
+                        f"  ⚠️  Space '{space_key}' non accessibile "
+                        f"({status}) — salto"
+                    )
+                    result[space_key] = []
+                    continue
+                raise
             print(f"  Found {len(pages)} pages in {space_key}")
             result[space_key] = pages
         return result
