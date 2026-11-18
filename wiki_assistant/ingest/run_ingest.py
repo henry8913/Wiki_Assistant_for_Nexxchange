@@ -6,6 +6,8 @@ from bs4 import BeautifulSoup
 from wiki_assistant.ingest.confluence import ConfluenceCrawler, WikiPage
 from wiki_assistant.ingest.image_descriptor import describe_image
 from wiki_assistant.ingest.image_handler import download_page_images
+from wiki_assistant.ingest.local_docs import ingest_local_pdfs
+from wiki_assistant.ingest.run_ingest_website import ingest_website
 from wiki_assistant.knowledge import get_wiki_knowledge
 
 IMAGES_DIR = Path("data/images")
@@ -143,6 +145,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Re-embed every page even if its version is unchanged",
     )
+    parser.add_argument(
+        "--no-website",
+        action="store_true",
+        help="Skip the Nexxchange website crawl (only Confluence + local PDFs)",
+    )
     args = parser.parse_args()
 
     if args.spaces:
@@ -158,3 +165,14 @@ if __name__ == "__main__":
         ingest_all(pages_by_space, force=args.force)
     finally:
         crawler.close()
+
+    # Local PDFs in wiki_update/ are always included in a full run.
+    ingest_local_pdfs(force=args.force)
+
+    # The company website is included too, unless this is a partial space run
+    # or explicitly skipped.
+    if not args.spaces and not args.no_website:
+        try:
+            ingest_website(force=args.force)
+        except Exception as exc:
+            print(f"⚠️  Website ingest saltato: {exc}")

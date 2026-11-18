@@ -1,3 +1,4 @@
+import hashlib
 import re
 from pathlib import Path
 
@@ -60,10 +61,44 @@ def _crawl(start_url: str, base_domain: str, max_pages: int):
     return pages
 
 
-def _insert_into_kb(pages: list):
+def _text_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()[:16]
+
+
+def _stored_hash(kb, url: str):
+    from sqlalchemy import select
+
+    table = kb.vector_db.table
+    try:
+        with kb.vector_db.Session() as sess:
+            rows = sess.execute(
+                select(table.c.meta_data)
+                .where(table.c.meta_data.contains({"type": "website", "source_url": url}))
+                .limit(1)
+            ).fetchall()
+        if rows:
+            return (rows[0][0] or {}).get("content_hash")
+    except Exception:
+        pass
+    return None
+
+
+def _insert_into_kb(pages: list, force: bool = False) -> int:
     kb = get_wiki_knowledge()
+    inserted = 0
     for url, text in pages:
         title = url.replace(BASE_URL, "").strip("/").replace("/", " — ") or "Home"
+        content_hash = _text_hash(text)
+
+        if not force and _stored_hash(kb, url) == content_hash:
+            print(f"  ✓ {url} — già aggiornato")
+            continue
+
+        try:
+            kb.vector_db.delete_by_metadata({"type": "website", "source_url": url})
+        except Exception:
+            pass
+
         kb.insert(
             name=f"Nexxchange — {title}",
             text_content=text,
@@ -72,17 +107,25 @@ def _insert_into_kb(pages: list):
                 "title": title,
                 "type": "website",
                 "domain": "nexxchange.com",
+                "content_hash": content_hash,
             },
             skip_if_exists=True,
         )
+        inserted += 1
+    return inserted
+
+
+def ingest_website(force: bool = False) -> int:
+    print(f"\n=== Crawl Nexxchange website (max {MAX_PAGES} pages) ===\n")
+    pages = _crawl(BASE_URL, BASE_URL, MAX_PAGES)
+    print(f"\nCrawled {len(pages)} pages, inserting into knowledge base...")
+    inserted = _insert_into_kb(pages, force=force)
+    print(f"\n✅ Website: {inserted} pagine aggiornate/inserite su {len(pages)}.")
+    return inserted
 
 
 def main():
-    print(f"=== Crawl Nexxchange website (max {MAX_PAGES} pages) ===\n")
-    pages = _crawl(BASE_URL, BASE_URL, MAX_PAGES)
-    print(f"\nCrawled {len(pages)} pages, inserting into knowledge base...")
-    _insert_into_kb(pages)
-    print(f"\n✅ Done. {len(pages)} pages ingested from nexxchange.com")
+    ingest_website()
 
 
 if __name__ == "__main__":

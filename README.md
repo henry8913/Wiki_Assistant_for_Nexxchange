@@ -32,16 +32,19 @@ Wiki Assistant è un assistente AI che risponde a qualsiasi domanda sul manuale 
 Wiki Assistant implementa una pipeline **RAG (Retrieval-Augmented Generation)**:
 
 ```
-Confluence Wiki  ──>  Crawler  ──>  Chunking  ──>  Embedding  ──>  pgvector (PostgreSQL)
-                                                       │
-                       ┌─────────────────────────────────┘
+Confluence Wiki ─┐
+PDF locali      ├──>  Chunking  ──>  Embedding  ──>  pgvector (PostgreSQL)
+Sito Nexxchange ─┘                                        │
+                       ┌──────────────────────────────────┘
                        │
 User  ──>  Chat UI  ──>  FastAPI  ──>  Agno Agent  ──>  Retrieval  ──>  LLM (OpenRouter)  ──>  Risposta + Fonti
 ```
 
-1. **Indicizzazione**: il crawler scarica le pagine Confluence, le suddivide in chunk, le vettorizza con un embedding model e le salva in PostgreSQL con pgvector.
+1. **Indicizzazione**: un unico comando raccoglie le pagine Confluence, i PDF in `wiki_update/` e il sito Nexxchange, li suddivide in chunk e li vettorizza in PostgreSQL con pgvector.
 2. **Ricerca**: quando un utente fa una domanda, il sistema cerca i chunk più simili semanticamente nel database.
 3. **Generazione**: l'Agno Agent passa i chunk recuperati come contesto al LLM, che genera una risposta citando le fonti.
+
+Ogni fonte è tracciata con la sua versione/fingerprint: alla riesecuzione vengono aggiornati **solo** i documenti cambiati, senza duplicati né re-embedding inutile.
 
 ---
 
@@ -55,6 +58,7 @@ User  ──>  Chat UI  ──>  FastAPI  ──>  Agno Agent  ──>  Retrieva
 | Database | PostgreSQL 16 + [pgvector](https://github.com/pgvector/pgvector) | Ricerca semantica vettoriale |
 | Backend | [FastAPI](https://fastapi.tiangolo.com/) | API REST e serving pagine |
 | Frontend | HTML / CSS / JS vanilla | Chat widget e pagina intera |
+| PDF | [pypdf](https://pypi.org/project/pypdf/) | Estrazione testo dai PDF locali |
 | Container | [Docker](https://www.docker.com/) + Docker Compose | Ambiente isolato |
 | Deploy | [GitHub Actions](https://github.com/features/actions) | Auto-deploy su push |
 | Server | Oracle Linux, Nginx Proxy Manager | Hosting produzione |
@@ -75,8 +79,9 @@ wiki_assistant/
 │   ├── confluence.py         # Crawler pagine Confluence
 │   ├── image_descriptor.py   # Descrizione immagini via vision LLM
 │   ├── image_handler.py      # Download e gestione immagini
-│   ├── run_ingest.py         # Script principale di ingestion
-│   └── run_ingest_website.py # Script ingestion sito Nexxchange
+│   ├── local_docs.py         # Ingestion PDF locali da wiki_update/
+│   ├── run_ingest.py         # Script principale: Confluence + PDF + sito
+│   └── run_ingest_website.py # Crawler sito Nexxchange
 ├── static/
 │   ├── chat.html             # Pagina chat full-screen
 │   ├── widget.js             # Widget chat fluttuante
@@ -113,16 +118,31 @@ La knowledge base usa:
 
 ### Ingestion (run_ingest.py)
 
-Lo script di ingestion:
-1. Si connette a Confluence via API (Basic Auth)
-2. Scansiona gli spazi configurati (`WIKI_SPACES`)
-3. Per ogni pagina: estrae HTML, converte in testo, suddivide in chunk
-4. Genera descrizioni delle immagini (opzionale, via vision LLM)
-5. Inserisce tutto nel vettoriale con metadati (url, spazio, versione)
+Un solo comando ingestion raccoglie **tutte** le fonti:
 
-### Sito Nexxchange (run_ingest_website.py)
+1. **Confluence** — si connette via API (Basic Auth), scansiona gli spazi configurati (`WIKI_SPACES`), estrae il testo di ogni pagina e ne genera le descrizioni delle immagini (via vision LLM). Gli spazi inesistenti/non accessibili vengono saltati con un warning.
+2. **PDF locali** — legge tutti i `*.pdf` presenti in `wiki_update/` (vedi sotto), un file per ogni documentazione che ti viene passata.
+3. **Sito Nexxchange** — crawler BFS su `https://www.nexxchange.com` (max 30 pagine), saltabile con `--no-website`.
 
-Crawler BFS separato che scansiona `https://www.nexxchange.com` (max 30 pagine) e inserisce i contenuti come knowledge di tipo `website`.
+Ogni fonte salva la propria **versione/fingerprint** nei metadati, quindi una nuova esecuzione:
+
+- salta i documenti invariati (`up to date`)
+- cancella i vecchi chunk e reinserisce quelli cambiati
+- aggiunge i nuovi file
+
+### 📄 Documentazione PDF locale (`wiki_update/`)
+
+Metti qui qualsiasi PDF che vuoi rendere disponibile all'assistente:
+
+```
+wiki_update/
+├── Guida_addebiti_soci_v23.pdf
+├── Migrazione_club_Nexxchange.pdf
+├── Modelli_di_fattura_Nexxchange.pdf
+└── Stagioni_Nexxchange.pdf
+```
+
+La cartella è montata nel container (`./wiki_update:/app/wiki_update:ro`), quindi puoi **aggiungere o sostituire PDF senza ricostruire l'immagine**: basta rilanciare l'ingestion. Un file con lo stesso nome e contenuto diverso viene riconosciuto come aggiornato e sostituito automaticamente.
 
 ---
 
@@ -167,16 +187,16 @@ cp .env.example .env
 docker compose up -d
 ```
 
-### 4. Ingerisci il wiki
+### 4. Ingerisci tutto (Confluence + PDF locali + sito)
 
 ```bash
 docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest
 ```
 
-### 5. (Opzionale) Ingerisci il sito Nexxchange
+Un solo comando addestra l'assistente su tutte le fonti. Alla riesecuzione aggiorna solo ciò che è cambiato. Per forzare la re-indicizzazione completa:
 
 ```bash
-docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest_website
+docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest --force
 ```
 
 L'applicazione sarà disponibile su `http://localhost:7777/chat`.
@@ -257,14 +277,24 @@ Il server è un Oracle Linux con Nginx Proxy Manager che fa da reverse proxy per
 # Log in tempo reale
 docker compose logs -f bot
 
-# Ricostruisci i container dopo modifiche
+# Ricostruisci i container dopo modifiche al codice
 docker compose up --build -d
 
-# Ingerisci solo spazi specifici del wiki
+# Ingestion completa: Confluence + PDF in wiki_update/ + sito Nexxchange
+# (aggiorna solo ciò che è cambiato)
+docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest
+
+# Ingestion forzata: re-indicizza tutto da zero
+docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest --force
+
+# Solo Confluence + PDF, senza il sito aziendale
+docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest --no-website
+
+# Ingerisci solo spazi specifici del wiki (salta sito)
 docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest --spaces "GOLIT"
 
-# Ingerisci il sito aziendale
-docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest_website
+# Ingerisci solo i PDF locali
+docker compose run --rm bot python -c "from wiki_assistant.ingest.local_docs import ingest_local_pdfs; ingest_local_pdfs()"
 
 # Terminale interattivo nel container bot
 docker compose run --rm bot bash

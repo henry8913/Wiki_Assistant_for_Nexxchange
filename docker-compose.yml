@@ -32,6 +32,8 @@ services:
       DATABASE_URL: postgresql+psycopg://ai:ai@db:5432/ai
     ports:
       - "7777:7777"
+    volumes:
+      - ./wiki_update:/app/wiki_update:ro
     entrypoint: ["/app/entrypoint.sh"]
     networks:
       - default
