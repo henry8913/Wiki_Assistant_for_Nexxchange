@@ -2,7 +2,7 @@ import hashlib
 import re
 from pathlib import Path
 
-import requests
+import httpx
 from bs4 import BeautifulSoup
 
 from wiki_assistant.knowledge import get_wiki_knowledge
@@ -10,11 +10,12 @@ from wiki_assistant.knowledge import get_wiki_knowledge
 BASE_URL = "https://www.nexxchange.com"
 VISITED = set()
 MAX_PAGES = 30
+HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
 def _extract_text(url: str) -> str | None:
     try:
-        resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+        resp = httpx.get(url, timeout=15, headers=HEADERS, follow_redirects=True)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "lxml")
 
@@ -48,7 +49,7 @@ def _crawl(start_url: str, base_domain: str, max_pages: int):
         print(f"ok ({len(text)} chars)")
 
         try:
-            resp = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+            resp = httpx.get(url, timeout=10, headers=HEADERS, follow_redirects=True)
             soup = BeautifulSoup(resp.text, "lxml")
             for link in soup.find_all("a", href=True):
                 href = link["href"]
