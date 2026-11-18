@@ -23,8 +23,9 @@ class WikiPage:
 
 
 class ConfluenceCrawler:
-    def __init__(self):
+    def __init__(self, spaces: Optional[list[str]] = None):
         self.base_url = WIKI_BASE_URL.rstrip("/")
+        self.spaces = spaces if spaces else WIKI_SPACES
         auth_str = f"{WIKI_EMAIL}:{WIKI_API_TOKEN}"
         self.auth_header = {
             "Authorization": f"Basic {base64.b64encode(auth_str.encode()).decode()}"
@@ -209,7 +210,7 @@ class ConfluenceCrawler:
 
     def get_all_pages_for_all_spaces(self) -> dict[str, list[WikiPage]]:
         result: dict[str, list[WikiPage]] = {}
-        for space_key in WIKI_SPACES:
+        for space_key in self.spaces:
             print(f"Crawling space: {space_key}")
             try:
                 pages = self.get_all_pages(space_key)

@@ -37,7 +37,7 @@ PDF locali      ├──>  Chunking  ──>  Embedding  ──>  pgvector (Pos
 Sito Nexxchange ─┘                                        │
                        ┌──────────────────────────────────┘
                        │
-User  ──>  Chat UI  ──>  FastAPI  ──>  Agno Agent  ──>  Retrieval  ──>  LLM (OpenRouter)  ──>  Risposta + Fonti
+User  ──>  Chat UI  ──>  FastAPI  ──>  Agno Agent  ──>  Retrieval  ──>  LLM (OpenCode)  ──>  Risposta + Fonti
 ```
 
 1. **Indicizzazione**: un unico comando raccoglie le pagine Confluence, i PDF in `wiki_update/` e il sito Nexxchange, li suddivide in chunk e li vettorizza in PostgreSQL con pgvector.
@@ -53,8 +53,8 @@ Ogni fonte è tracciata con la sua versione/fingerprint: alla riesecuzione vengo
 | Componente | Tecnologia | Ruolo |
 |---|---|---|
 | Framework AI | [Agno](https://github.com/agno-agi/agno) | Orchestra agente, knowledge base e sessioni |
-| LLM | [OpenRouter](https://openrouter.ai) (DeepSeek, GPT, Claude, ecc.) | Generazione risposte |
-| Embedding | `text-embedding-3-small` via OpenRouter | Vettorizzazione chunk |
+| LLM | [OpenCode Console](https://opencode.ai/docs/zen/) (`deepseek-v4.1-flash`) | Generazione risposte |
+| Embedding | [FastEmbed](https://qdrant.github.io/fastembed/) locale, multilingue | Vettorizzazione chunk (384 dim, senza API esterna) |
 | Database | PostgreSQL 16 + [pgvector](https://github.com/pgvector/pgvector) | Ricerca semantica vettoriale |
 | Backend | [FastAPI](https://fastapi.tiangolo.com/) | API REST e serving pagine |
 | Frontend | HTML / CSS / JS vanilla | Chat widget e pagina intera |
@@ -113,8 +113,10 @@ L'agente è configurato con:
 La knowledge base usa:
 - **PgVector** come vettoriale
 - **Hybrid search** (combinazione di similarità vettoriale e full-text search)
-- **OpenAI-compatible embedder** (`text-embedding-3-small`) via OpenRouter
+- **FastEmbed locale** (`paraphrase-multilingual-MiniLM-L12-v2`, 384 dimensioni): multilingue e senza alcuna API esterna, il modello è già dentro l'immagine Docker
 - Tabella `knowledge_contents` per i metadati dei documenti
+
+Se cambi il modello di embedding la dimensione dei vettori cambia: la tabella `wiki_knowledge_vectors` viene ricreata automaticamente e il contenuto va re-indicizzato.
 
 ### Ingestion (run_ingest.py)
 
@@ -150,8 +152,15 @@ La cartella è montata nel container (`./wiki_update:/app/wiki_update:ro`), quin
 
 | Variabile | Obbligatoria | Descrizione |
 |---|---|---|
-| `OPENROUTER_API_KEY` | ✅ | Chiave API da [openrouter.ai/keys](https://openrouter.ai/keys) |
-| `OPENROUTER_MODEL` | ✅ | Modello LLM (es. `deepseek/deepseek-v4-flash`) |
+| `OPENCODE_API_KEY` | ✅ | Chiave API da [opencode.ai/console](https://opencode.ai/console) → *Account › Personal API keys* |
+| `OPENCODE_MODEL` | ✅ | Modello LLM (default `deepseek-v4.1-flash`) |
+| `OPENCODE_BASE_URL` | ❌ | Base URL OpenAI-compatible (Go: `https://opencode.ai/inference/go/openai/v1`) |
+| `OPENCODE_SESSION_ID` | ❌ | Header `x-opencode-session` richiesto dal piano Go |
+| `OPENCODE_USER_AGENT` | ❌ | User-Agent "coding agent" richiesto dal piano Go |
+| `VISION_MODEL` | ❌ | Modello per la descrizione delle immagini (default `claude-haiku-5-5`) |
+| `EMBEDDING_PROVIDER` | ❌ | `fastembed` (default, locale) oppure `openrouter` |
+| `EMBEDDING_MODEL` | ❌ | Modello di embedding locale multilingue |
+| `EMBEDDING_DIMENSIONS` | ❌ | Dimensione dei vettori (default `384`) |
 | `WIKI_BASE_URL` | ✅ | URL base Confluence (es. `https://nexxchange.atlassian.net/wiki`) |
 | `WIKI_SPACES` | ✅ | Chiavi spazi separati da virgola (es. `GOLIT,GOLFR`) |
 | `WIKI_EMAIL` | ✅ | Email account Atlassian |
@@ -171,7 +180,7 @@ La cartella è montata nel container (`./wiki_update:/app/wiki_update:ro`), quin
 
 | Cosa ti serve | Dove prenderlo |
 |---|---|
-| OpenRouter API key | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| OpenCode API key | [opencode.ai/console](https://opencode.ai/console) → *Account › Personal API keys* |
 | API token Atlassian | [id.atlassian.com/manage/api-tokens](https://id.atlassian.com/manage/api-tokens) |
 
 ### 2. Configura

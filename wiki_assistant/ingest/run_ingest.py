@@ -1,4 +1,6 @@
 import argparse
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from bs4 import BeautifulSoup
@@ -11,6 +13,16 @@ from wiki_assistant.ingest.run_ingest_website import ingest_website
 from wiki_assistant.knowledge import get_wiki_knowledge
 
 IMAGES_DIR = Path("data/images")
+MAX_VISION_WORKERS = 4
+
+
+def _describe_safe(image_path: Path) -> str:
+    """Describe an image, returning an empty string on failure."""
+    try:
+        return describe_image(image_path)
+    except Exception as exc:
+        print(f"  (image error {image_path.name}: {exc})")
+        return ""
 
 
 def _page_to_text(page: WikiPage) -> str:
@@ -78,10 +90,13 @@ def ingest_all(pages_by_space: dict[str, list[WikiPage]], force: bool = False):
         for page in pages:
             processed += 1
             print(f"  [{processed}/{total}] {page.title}... ", end="", flush=True)
+            timings: dict[str, float] = {}
 
             try:
                 kb = get_wiki_knowledge()
+                t0 = time.time()
                 stored_version = _stored_version(kb, page.id)
+                timings["check"] = time.time() - t0
 
                 if not force and stored_version is not None:
                     try:
@@ -93,23 +108,40 @@ def ingest_all(pages_by_space: dict[str, list[WikiPage]], force: bool = False):
                         pass
 
                 if stored_version is not None or force:
+                    t0 = time.time()
                     _delete_page_vectors(kb, page.id)
+                    timings["delete"] = time.time() - t0
 
+                t0 = time.time()
                 text = _page_to_text(page)
+                timings["text"] = time.time() - t0
                 if not text.strip():
                     print("skipped (empty)")
                     continue
 
+                t0 = time.time()
                 _chunk_and_insert(page, text)
+                timings["insert"] = time.time() - t0
 
                 images_dir = IMAGES_DIR
                 image_paths = []
                 if page.image_urls:
+                    t0 = time.time()
                     image_paths = download_page_images(crawler, page, images_dir)
+                    timings["img_download"] = time.time() - t0
 
-                for img_path, original_url in image_paths:
-                    try:
-                        description = describe_image(img_path)
+                if image_paths:
+                    t0 = time.time()
+                    # The vision calls are the slowest step: run them in parallel.
+                    with ThreadPoolExecutor(max_workers=MAX_VISION_WORKERS) as pool:
+                        descriptions = list(
+                            pool.map(lambda p: _describe_safe(p), image_paths)
+                        )
+                    timings["vision"] = time.time() - t0
+
+                    for (img_path, original_url), description in zip(image_paths, descriptions):
+                        if not description:
+                            continue
                         kb.insert(
                             name=f"{page.title} — {img_path.name}",
                             text_content=description,
@@ -123,11 +155,12 @@ def ingest_all(pages_by_space: dict[str, list[WikiPage]], force: bool = False):
                             },
                             skip_if_exists=True,
                         )
-                    except Exception as img_err:
-                        print(f"  (image error: {img_err})")
 
                 updated += 1
                 print("ok" + (" (updated)" if stored_version is not None else ""))
+                slow = {k: round(v, 1) for k, v in timings.items() if v > 1}
+                if slow:
+                    print(f"      tempi: {slow}")
             except Exception as e:
                 print(f"error: {e}")
 
@@ -153,13 +186,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.spaces:
-        import os
-        os.environ["WIKI_SPACES"] = args.spaces
-        from wiki_assistant.config import WIKI_SPACES
-        import importlib
-        importlib.reload(__import__("wiki_assistant.config"))
+        spaces = [s.strip() for s in args.spaces.split(",") if s.strip()]
+    else:
+        spaces = None
 
-    crawler = ConfluenceCrawler()
+    crawler = ConfluenceCrawler(spaces=spaces)
     try:
         pages_by_space = crawler.get_all_pages_for_all_spaces()
         ingest_all(pages_by_space, force=args.force)

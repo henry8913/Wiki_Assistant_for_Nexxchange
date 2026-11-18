@@ -1,6 +1,12 @@
 from agno.agent import Agent
 
-from wiki_assistant.config import OPENROUTER_API_KEY, OPENROUTER_BASE_URL, OPENROUTER_MODEL
+from wiki_assistant.config import (
+    OPENCODE_API_KEY,
+    OPENCODE_BASE_URL,
+    OPENCODE_MODEL,
+    OPENCODE_SESSION_ID,
+    OPENCODE_USER_AGENT,
+)
 
 _agent: Agent | None = None
 
@@ -8,15 +14,19 @@ _agent: Agent | None = None
 def get_agent() -> Agent:
     global _agent
     if _agent is None:
-        from agno.models.openrouter import OpenRouter
+        from agno.models.openai.chat import OpenAIChat
         from wiki_assistant.knowledge import get_wiki_knowledge
 
         _agent = Agent(
             name="GolfSuite Wiki Assistant",
-            model=OpenRouter(
-                id=OPENROUTER_MODEL,
-                api_key=OPENROUTER_API_KEY,
-                base_url=OPENROUTER_BASE_URL,
+            model=OpenAIChat(
+                id=OPENCODE_MODEL,
+                api_key=OPENCODE_API_KEY,
+                base_url=OPENCODE_BASE_URL,
+                default_headers={
+                    "x-opencode-session": OPENCODE_SESSION_ID,
+                    "User-Agent": OPENCODE_USER_AGENT,
+                },
                 max_tokens=2048,
             ),
             knowledge=get_wiki_knowledge(),

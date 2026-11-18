@@ -34,6 +34,7 @@ services:
       - "7777:7777"
     volumes:
       - ./wiki_update:/app/wiki_update:ro
+      - ./data:/app/data
     entrypoint: ["/app/entrypoint.sh"]
     networks:
       - default

@@ -1,7 +1,10 @@
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
 
 from wiki_assistant.ingest.confluence import ConfluenceCrawler, WikiPage
+
+MAX_WORKERS = 8
 
 
 def download_page_images(
@@ -9,25 +12,29 @@ def download_page_images(
     page: WikiPage,
     base_dir: Path,
 ) -> list[tuple[Path, str]]:
+    """Download all images of a page, in parallel.
+
+    Atlassian is slow at serving attachments one by one, so the downloads are
+    issued concurrently and the order of the results is preserved.
+    """
     page_dir = base_dir / page.space_key / page.id
     page_dir.mkdir(parents=True, exist_ok=True)
 
-    downloaded: list[tuple[Path, str]] = []
-
-    for img_url in page.image_urls:
-        path = crawler.download_image(img_url, page_dir)
-        if path:
-            downloaded.append((path, img_url))
-
-    attachments = crawler.get_page_attachments(page.id)
-    for att in attachments:
-        download_url = att["download_url"]
+    urls = list(page.image_urls)
+    for att in crawler.get_page_attachments(page.id):
         if _is_image(att.get("media_type", "")):
-            path = crawler.download_image(download_url, page_dir)
-            if path:
-                downloaded.append((path, download_url))
+            urls.append(att["download_url"])
 
-    return downloaded
+    # keep the first occurrence of every url
+    unique_urls = list(dict.fromkeys(urls))
+
+    if not unique_urls:
+        return []
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        paths = list(pool.map(lambda u: crawler.download_image(u, page_dir), unique_urls))
+
+    return [(path, url) for path, url in zip(paths, unique_urls) if path]
 
 
 def _is_image(media_type: str) -> bool:
