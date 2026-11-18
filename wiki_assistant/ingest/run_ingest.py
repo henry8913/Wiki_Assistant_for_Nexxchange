@@ -14,6 +14,9 @@ from wiki_assistant.knowledge import get_wiki_knowledge
 
 IMAGES_DIR = Path("data/images")
 MAX_VISION_WORKERS = 8
+# Some pages collect hundreds of screenshots: describing all of them is slow
+# and adds noise. The biggest images are the ones that carry information.
+MAX_IMAGES_PER_PAGE = 12
 
 
 def _describe_safe(image_path: Path) -> str:
@@ -156,6 +159,10 @@ def ingest_all(pages_by_space: dict[str, list[WikiPage]], force: bool = False):
                     timings["img_download"] = time.time() - t0
 
                 if image_paths:
+                    # keep the biggest images of the page
+                    image_paths.sort(key=lambda item: item[0].stat().st_size, reverse=True)
+                    image_paths = image_paths[:MAX_IMAGES_PER_PAGE]
+
                     t0 = time.time()
                     # The vision calls are the slowest step: run them in parallel.
                     with ThreadPoolExecutor(max_workers=MAX_VISION_WORKERS) as pool:
