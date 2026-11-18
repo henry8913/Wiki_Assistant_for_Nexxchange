@@ -1,10 +1,10 @@
 [project]
 name = "wiki-assistant"
 version = "0.1.0"
-description = "AI Wiki Assistant for Nexxchange GolfSuite - Telegram bot powered by Agno + OpenRouter"
+description = "AI Wiki Assistant for Nexxchange GolfSuite - web chat powered by Agno + OpenRouter + pgvector"
 requires-python = ">=3.12"
 dependencies = [
-    "agno[os,telegram,postgres]>=2.7.3",
+    "agno[os,postgres]>=3.2.1,<4",
     "openai>=1.0.0",
     "sqlalchemy>=2.0.0",
     "psycopg>=3.3.0",
