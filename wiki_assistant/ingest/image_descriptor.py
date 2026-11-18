@@ -34,8 +34,11 @@ def describe_image(image_path: Path) -> str:
         url = f"{OPENCODE_BASE_URL.replace('/openai/v1', '')}/anthropic/v1/messages"
         payload = {
             "model": VISION_MODEL,
-            "max_tokens": 500,
+            "max_tokens": 400,
             "system": SYSTEM_PROMPT,
+            # A short description does not need reasoning: it only slows the
+            # call down and can eat the whole token budget.
+            "thinking": {"type": "disabled"},
             "messages": [
                 {
                     "role": "user",
@@ -50,6 +53,8 @@ def describe_image(image_path: Path) -> str:
         url = f"{OPENCODE_BASE_URL}/chat/completions"
         payload = {
             "model": VISION_MODEL,
+            "max_tokens": 400,
+            "reasoning_effort": "none",
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {
