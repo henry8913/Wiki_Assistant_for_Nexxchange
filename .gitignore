@@ -220,3 +220,6 @@ __marimo__/
 # Project data
 data/
 *.db
+
+# macOS
+.DS_Store
