@@ -21,7 +21,7 @@ def _describe_safe(image_path: Path) -> str:
     try:
         return describe_image(image_path)
     except Exception as exc:
-        print(f"  (image error {image_path.name}: {exc})")
+        print(f"  (image error {image_path}: {exc})")
         return ""
 
 
@@ -135,7 +135,7 @@ def ingest_all(pages_by_space: dict[str, list[WikiPage]], force: bool = False):
                     # The vision calls are the slowest step: run them in parallel.
                     with ThreadPoolExecutor(max_workers=MAX_VISION_WORKERS) as pool:
                         descriptions = list(
-                            pool.map(lambda p: _describe_safe(p), image_paths)
+                            pool.map(lambda item: _describe_safe(item[0]), image_paths)
                         )
                     timings["vision"] = time.time() - t0
 
