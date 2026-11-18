@@ -98,7 +98,11 @@ def _has_image_descriptions(kb, page_id: str) -> bool:
         return True
 
 
-def ingest_all(pages_by_space: dict[str, list[WikiPage]], force: bool = False):
+def ingest_all(
+    pages_by_space: dict[str, list[WikiPage]],
+    force: bool = False,
+    with_images: bool = False,
+):
     total = sum(len(pages) for pages in pages_by_space.values())
     processed = 0
     updated = 0
@@ -125,7 +129,11 @@ def ingest_all(pages_by_space: dict[str, list[WikiPage]], force: bool = False):
                             # The page is unchanged, but it may still be missing
                             # the descriptions of its images: in that case the
                             # page is processed again (the text is not duplicated).
-                            if page.image_urls and not _has_image_descriptions(kb, page.id):
+                            if (
+                                with_images
+                                and page.image_urls
+                                and not _has_image_descriptions(kb, page.id)
+                            ):
                                 print("(immagini mancanti, rigenero)")
                             else:
                                 print("up to date")
@@ -153,8 +161,7 @@ def ingest_all(pages_by_space: dict[str, list[WikiPage]], force: bool = False):
 
                 images_dir = IMAGES_DIR
                 image_paths = []
-                if page.image_urls:
-                    t0 = time.time()
+                if with_images and page.image_urls:
                     image_paths = download_page_images(crawler, page, images_dir)
                     timings["img_download"] = time.time() - t0
 
@@ -215,6 +222,15 @@ if __name__ == "__main__":
         action="store_true",
         help="Skip the Nexxchange website crawl (only Confluence + local PDFs)",
     )
+    parser.add_argument(
+        "--with-images",
+        action="store_true",
+        help=(
+            "Also describe the images of the wiki with a vision model. "
+            "Slower and it adds many generic chunks that can weaken retrieval, "
+            "so it is off by default."
+        ),
+    )
     args = parser.parse_args()
 
     if args.spaces:
@@ -225,7 +241,7 @@ if __name__ == "__main__":
     crawler = ConfluenceCrawler(spaces=spaces)
     try:
         pages_by_space = crawler.get_all_pages_for_all_spaces()
-        ingest_all(pages_by_space, force=args.force)
+        ingest_all(pages_by_space, force=args.force, with_images=args.with_images)
     finally:
         crawler.close()
 
