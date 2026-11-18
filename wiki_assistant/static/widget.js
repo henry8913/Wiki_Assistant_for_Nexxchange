@@ -254,25 +254,113 @@
       xhr.open('POST', BASE_URL + '/agents/' + AGENT_ID + '/runs', true);
       xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 
-      xhr.onload = function () {
-        if (xhr.status === 200) {
-          var result = parseSSE(xhr.responseText);
+      var acc = '';          // testo dell'assistente accumulato dai delta
+      var seen = 0;          // caratteri già letti da xhr.responseText
+      var pending = '';      // riga SSE incompleta
+      var botDiv = null;     // nodo del messaggio in streaming
+      var sessionId = '';
+      var finalContent = '';
+      var renderTimer = null;
+
+      function bodyEl() { return document.getElementById('ws-body'); }
+      function nearBottom() {
+        var b = bodyEl();
+        return !b || (b.scrollHeight - b.scrollTop - b.clientHeight) < 160;
+      }
+      function scrollToBottom() {
+        var b = bodyEl();
+        if (b) b.scrollTop = b.scrollHeight;
+      }
+      function ensureBot() {
+        if (!botDiv) {
           showTyping(false);
-          if (result.content) {
-            addMsg(result.content, 'bot', Date.now());
-            if (result.session_id) {
-              Store.setCurId(result.session_id);
-              Store.addSession(result.session_id, text);
-              Store.addMsgToConv(result.session_id, 'user', text, Date.now());
-              Store.addMsgToConv(result.session_id, 'bot', result.content, Date.now());
+          botDiv = document.createElement('div');
+          botDiv.className = 'm bot streaming';
+          bodyEl().appendChild(botDiv);
+          scrollToBottom();
+        }
+        return botDiv;
+      }
+      function paint() {
+        renderTimer = null;
+        if (!botDiv) return;
+        var stick = nearBottom();
+        botDiv.innerHTML = renderMarkdown(acc);
+        if (stick) scrollToBottom();
+      }
+      function schedulePaint() {
+        if (renderTimer) return;
+        renderTimer = setTimeout(paint, 70);
+      }
+      function handleLine(raw) {
+        var line = raw.trim();
+        if (line.indexOf('data: ') !== 0) return;
+        var d;
+        try { d = JSON.parse(line.slice(6)); } catch (e) { return; }
+        var ev = (d.event || '').toLowerCase();
+        if (ev === 'runcontent') {
+          if (d.content) { acc += d.content; ensureBot(); schedulePaint(); }
+        } else if (ev === 'runcompleted') {
+          if (d.session_id) sessionId = d.session_id;
+          if (d.content) finalContent = d.content;
+        } else if (ev === 'toolcallstarted') {
+          if (!botDiv) showTyping(true);
+        }
+      }
+
+      // Risposta in streaming: l'utente legge mentre il modello scrive.
+      xhr.onprogress = function () {
+        var full = xhr.responseText || '';
+        var chunk = full.substring(seen);
+        if (!chunk) return;
+        seen = full.length;
+        pending += chunk;
+        var lines = pending.split('\n');
+        pending = lines.pop();
+        for (var i = 0; i < lines.length; i++) handleLine(lines[i]);
+      };
+
+      xhr.onload = function () {
+        if (pending) handleLine(pending);
+
+        if (xhr.status === 200) {
+          if (renderTimer) { clearTimeout(renderTimer); renderTimer = null; }
+          if (finalContent) acc = finalContent;
+          showTyping(false);
+
+          if (acc) {
+            var ts = Date.now();
+            if (botDiv) {
+              botDiv.classList.remove('streaming');
+              botDiv.innerHTML = renderMarkdown(acc) + '<div class="m-t">' + formatTime(ts) + '</div>';
+              addCopyButtons(botDiv);
+              scrollToBottom();
+            } else {
+              addMsg(acc, 'bot', ts);
+            }
+            if (sessionId) {
+              Store.setCurId(sessionId);
+              Store.addSession(sessionId, text);
+              Store.addMsgToConv(sessionId, 'user', text, ts);
+              Store.addMsgToConv(sessionId, 'bot', acc, ts);
               renderSessions();
             }
-          } else addMsg('Scusa, non ho trovato informazioni. Prova a riformulare.', 'bot', Date.now());
-        } else if (retries < MAX_RETRIES) { retries++; setTimeout(attempt, RETRY_DELAY); }
+          } else if (!botDiv) {
+            addMsg('Scusa, non ho trovato informazioni. Prova a riformulare.', 'bot', Date.now());
+          }
+        } else if (retries < MAX_RETRIES) {
+          retries++; setTimeout(attempt, RETRY_DELAY);
+        } else {
+          showTyping(false);
+          showError('Errore di connessione. Riprova.');
+        }
+      };
+
+      xhr.onerror = function () {
+        if (retries < MAX_RETRIES) { retries++; setTimeout(attempt, RETRY_DELAY); }
         else { showTyping(false); showError('Errore di connessione. Riprova.'); }
       };
-      xhr.onerror = function () { if (retries < MAX_RETRIES) { retries++; setTimeout(attempt, RETRY_DELAY); } else { showTyping(false); showError('Errore di connessione. Riprova.'); } };
-      xhr.onerror = function () { if (retries < MAX_RETRIES) { retries++; setTimeout(attempt, RETRY_DELAY); } else { showTyping(false); showError('Errore di connessione. Riprova.'); } };
+
       var params = 'message=' + encodeURIComponent(text);
       if (sid) params += '&session_id=' + encodeURIComponent(sid);
       xhr.send(params);
