@@ -1,4 +1,5 @@
 import base64
+import mimetypes
 import re
 from dataclasses import dataclass, field
 from html import unescape
@@ -138,11 +139,10 @@ class ConfluenceCrawler:
                     src = f"{self.base_url}{src}"
                 image_urls.append(src)
 
+        # Only inline images (ri:url) are candidates: ri:link points to pages,
+        # not to images.
         urls_in_text = re.findall(
             r'ri:url[^>]*ri:value="([^"]+)"',
-            content_html
-        ) + re.findall(
-            r'ri:link[^>]*ri:value="([^"]+)"',
             content_html
         )
         for u in urls_in_text:
@@ -176,17 +176,28 @@ class ConfluenceCrawler:
         if name in ("", "download", "content") and len(parts) >= 2:
             name = parts[-2]
         name = re.sub(r"[^a-zA-Z0-9._-]", "_", name) or f"image_{abs(hash(url))}"
-        if not Path(name).suffix:
-            name += ".png"
 
+        has_extension = bool(Path(name).suffix)
         output_path = output_dir / name
-
-        if output_path.exists():
+        if has_extension and output_path.exists():
             return output_path
 
         try:
             resp = self.client.get(url)
             resp.raise_for_status()
+
+            # Some urls are pages, not images: keep only real images.
+            content_type = resp.headers.get("content-type", "").split(";")[0].strip()
+            if not content_type.startswith("image/"):
+                return None
+
+            if not has_extension:
+                extension = mimetypes.guess_extension(content_type) or ".png"
+                name = f"{name}{extension}"
+                output_path = output_dir / name
+                if output_path.exists():
+                    return output_path
+
             output_path.write_bytes(resp.content)
             return output_path
         except Exception:
