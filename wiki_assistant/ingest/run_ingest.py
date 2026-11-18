@@ -13,7 +13,7 @@ from wiki_assistant.ingest.run_ingest_website import ingest_website
 from wiki_assistant.knowledge import get_wiki_knowledge
 
 IMAGES_DIR = Path("data/images")
-MAX_VISION_WORKERS = 4
+MAX_VISION_WORKERS = 8
 
 
 def _describe_safe(image_path: Path) -> str:
@@ -78,6 +78,23 @@ def _delete_page_vectors(kb, page_id: str):
         print(f"  (delete error: {exc})")
 
 
+def _has_image_descriptions(kb, page_id: str) -> bool:
+    """True if the page already has at least one image description stored."""
+    from sqlalchemy import func, select
+
+    table = kb.vector_db.table
+    try:
+        with kb.vector_db.Session() as sess:
+            count = sess.execute(
+                select(func.count())
+                .select_from(table)
+                .where(table.c.meta_data.contains({"page_id": page_id, "type": "image_description"}))
+            ).scalar()
+        return bool(count)
+    except Exception:
+        return True
+
+
 def ingest_all(pages_by_space: dict[str, list[WikiPage]], force: bool = False):
     total = sum(len(pages) for pages in pages_by_space.values())
     processed = 0
@@ -98,16 +115,24 @@ def ingest_all(pages_by_space: dict[str, list[WikiPage]], force: bool = False):
                 stored_version = _stored_version(kb, page.id)
                 timings["check"] = time.time() - t0
 
+                page_changed = force
                 if not force and stored_version is not None:
                     try:
                         if int(stored_version) >= int(page.version):
-                            print("up to date")
-                            skipped += 1
-                            continue
+                            # The page is unchanged, but it may still be missing
+                            # the descriptions of its images: in that case the
+                            # page is processed again (the text is not duplicated).
+                            if page.image_urls and not _has_image_descriptions(kb, page.id):
+                                print("(immagini mancanti, rigenero)")
+                            else:
+                                print("up to date")
+                                skipped += 1
+                                continue
+                        page_changed = True
                     except (TypeError, ValueError):
-                        pass
+                        page_changed = True
 
-                if stored_version is not None or force:
+                if page_changed and stored_version is not None:
                     t0 = time.time()
                     _delete_page_vectors(kb, page.id)
                     timings["delete"] = time.time() - t0

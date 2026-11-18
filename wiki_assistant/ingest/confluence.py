@@ -1,6 +1,7 @@
 import base64
 import re
 from dataclasses import dataclass, field
+from html import unescape
 from pathlib import Path
 from typing import Optional
 
@@ -31,10 +32,16 @@ class ConfluenceCrawler:
             "Authorization": f"Basic {base64.b64encode(auth_str.encode()).decode()}"
         }
         self.api_base = f"{self.base_url}/rest/api"
-        self.client = httpx.Client(headers={
-            **self.auth_header,
-            "Accept": "application/json",
-        })
+        self.client = httpx.Client(
+            headers={
+                **self.auth_header,
+                "Accept": "application/json",
+            },
+            # Atlassian redirects image downloads to api.media.atlassian.com
+            follow_redirects=True,
+            # Default httpx timeout is 5s: too short for big attachments.
+            timeout=httpx.Timeout(60.0, connect=15.0),
+        )
 
     def get_all_pages(self, space_key: str) -> list[WikiPage]:
         pages: list[WikiPage] = []
@@ -125,7 +132,7 @@ class ConfluenceCrawler:
         image_urls = []
 
         for img in soup.find_all("img"):
-            src = img.get("src", "")
+            src = unescape(img.get("src", ""))
             if src and not src.startswith("data:"):
                 if src.startswith("/"):
                     src = f"{self.base_url}{src}"
@@ -139,6 +146,7 @@ class ConfluenceCrawler:
             content_html
         )
         for u in urls_in_text:
+            u = unescape(u)
             if u not in image_urls:
                 image_urls.append(u)
 
@@ -161,10 +169,17 @@ class ConfluenceCrawler:
         )
 
     def download_image(self, url: str, output_dir: Path) -> Optional[Path]:
-        filename = re.sub(r'[^a-zA-Z0-9._-]', '_', url.split("/")[-1].split("?")[0])
-        if not filename:
-            filename = f"image_{abs(hash(url))}.png"
-        output_path = output_dir / filename
+        # Attachment urls all end with ".../download", so fall back to the
+        # attachment id to keep a distinct name for every image.
+        parts = [p for p in url.split("/") if p]
+        name = parts[-1].split("?")[0] if parts else ""
+        if name in ("", "download", "content") and len(parts) >= 2:
+            name = parts[-2]
+        name = re.sub(r"[^a-zA-Z0-9._-]", "_", name) or f"image_{abs(hash(url))}"
+        if not Path(name).suffix:
+            name += ".png"
+
+        output_path = output_dir / name
 
         if output_path.exists():
             return output_path
@@ -224,6 +239,13 @@ class ConfluenceCrawler:
                     result[space_key] = []
                     continue
                 raise
+            except httpx.RequestError as exc:
+                print(
+                    f"  ⚠️  Space '{space_key}' non raggiungibile "
+                    f"({type(exc).__name__}) — salto"
+                )
+                result[space_key] = []
+                continue
             print(f"  Found {len(pages)} pages in {space_key}")
             result[space_key] = pages
         return result

@@ -157,7 +157,7 @@ La cartella è montata nel container (`./wiki_update:/app/wiki_update:ro`), quin
 | `OPENCODE_BASE_URL` | ❌ | Base URL OpenAI-compatible (Go: `https://opencode.ai/inference/go/openai/v1`) |
 | `OPENCODE_SESSION_ID` | ❌ | Header `x-opencode-session` richiesto dal piano Go |
 | `OPENCODE_USER_AGENT` | ❌ | User-Agent "coding agent" richiesto dal piano Go |
-| `VISION_MODEL` | ❌ | Modello per la descrizione delle immagini (default `claude-haiku-5-5`) |
+| `VISION_MODEL` | ❌ | Modello per la descrizione delle immagini (default `deepseek-v4.1-flash`) |
 | `EMBEDDING_PROVIDER` | ❌ | `fastembed` (default, locale) oppure `openrouter` |
 | `EMBEDDING_MODEL` | ❌ | Modello di embedding locale multilingue |
 | `EMBEDDING_DIMENSIONS` | ❌ | Dimensione dei vettori (default `384`) |
