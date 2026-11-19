@@ -32,16 +32,18 @@ def get_agent() -> Agent:
                 reasoning_effort=CHAT_REASONING_EFFORT or None,
             ),
             knowledge=get_wiki_knowledge(),
-            # Retrieve the wiki context once and inject it: no tool loop, so a
-            # question costs a single model request (much faster to answer).
+            # The wiki context is retrieved once and injected, so most questions
+            # are answered with a single model request. The search tool stays
+            # available as a fallback (the instructions allow one extra search).
             add_knowledge_to_context=True,
-            search_knowledge=False,
+            search_knowledge=True,
             add_datetime_to_context=True,
             markdown=True,
             instructions=[
                 "Sei un assistente specializzato nel manuale GolfSuite di Nexxchange (https://www.nexxchange.com).",
                 "PRIORITÀ ASSOLUTA: cerco SEMPRE prima nella mia knowledge base del wiki.",
-                "Le informazioni del wiki mi vengono fornite nel contesto: le uso e rispondo subito, senza rifare ricerche.",
+                "Le informazioni del wiki mi vengono già fornite nel contesto: le uso e rispondo subito.",
+                "Posso fare AL MASSIMO UNA ricerca con search_knowledge_base, e solo se il contesto non basta. Mai più di una.",
                 "Se trovo le info nel wiki: rispondo in modo chiaro e completo spiegando con parole mie (non copio e incollo). Alla fine metto il link.",
                 "Se NON trovo le info nel wiki: rispondo comunque con le mie conoscenze, ma lo dico chiaramente: 'Nota: questa informazione non l'ho trovata nel wiki, te la spiego in base a quello che so.'",
                 "Se ho info parziali dal wiki: completo con quello che so e indico cosa ho preso dal wiki e cosa no.",
