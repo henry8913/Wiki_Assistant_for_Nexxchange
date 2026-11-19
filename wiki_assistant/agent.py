@@ -17,6 +17,7 @@ def get_agent() -> Agent:
     if _agent is None:
         from agno.models.openai.chat import OpenAIChat
         from wiki_assistant.knowledge import get_wiki_knowledge
+        from wiki_assistant.retriever import wiki_retriever
 
         _agent = Agent(
             name="GolfSuite Wiki Assistant",
@@ -32,9 +33,9 @@ def get_agent() -> Agent:
                 reasoning_effort=CHAT_REASONING_EFFORT or None,
             ),
             knowledge=get_wiki_knowledge(),
-            # The wiki context is retrieved once and injected, so most questions
-            # are answered with a single model request. The search tool stays
-            # available as a fallback (the instructions allow one extra search).
+            # Hybrid search plus a lexical boost on rare terms: a plain vector
+            # search misses questions like "cosa sono i Platzhalter".
+            knowledge_retriever=wiki_retriever,
             add_knowledge_to_context=True,
             search_knowledge=True,
             add_datetime_to_context=True,
