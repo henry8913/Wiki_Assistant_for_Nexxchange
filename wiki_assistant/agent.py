@@ -1,6 +1,7 @@
 from agno.agent import Agent
 
 from wiki_assistant.config import (
+    CHAT_REASONING_EFFORT,
     OPENCODE_API_KEY,
     OPENCODE_BASE_URL,
     OPENCODE_MODEL,
@@ -28,6 +29,7 @@ def get_agent() -> Agent:
                     "User-Agent": OPENCODE_USER_AGENT,
                 },
                 max_tokens=2048,
+                reasoning_effort=CHAT_REASONING_EFFORT or None,
             ),
             knowledge=get_wiki_knowledge(),
             # Retrieve the wiki context once and inject it: no tool loop, so a

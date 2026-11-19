@@ -31,8 +31,12 @@ OPENCODE_SESSION_ID: str = _env("OPENCODE_SESSION_ID", "ses_wiki_assistant_golfs
 OPENCODE_USER_AGENT: str = _env("OPENCODE_USER_AGENT", "wiki-assistant/1.0")
 
 # Modello per la descrizione delle immagini del wiki (vision).
-# Claude Haiku è molto più rapido di DeepSeek su questo compito.
-VISION_MODEL: str = _env("VISION_MODEL", "claude-haiku-5-5")
+# Di default lo stesso modello della chat.
+VISION_MODEL: str = _env("VISION_MODEL", "deepseek-v4.1-flash")
+
+# Sforzo di ragionamento del modello in chat: none | minimal | low | medium | high.
+# Vuoto = default del modello. "none" risponde prima ma ragiona meno.
+CHAT_REASONING_EFFORT: str = _env("CHAT_REASONING_EFFORT", "")
 
 # ---------------------------------------------------------------------------
 # Embeddings
