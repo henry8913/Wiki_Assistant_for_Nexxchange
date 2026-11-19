@@ -112,7 +112,7 @@ L'agente è configurato con:
 
 La knowledge base usa:
 - **PgVector** come vettoriale
-- **Hybrid search** (combinazione di similarità vettoriale e full-text search)
+- **Retriever custom** (`retriever.py`): unisce la ricerca ibrida di Agno con un boost lessicale sui termini *rari* della domanda (es. "Platzhalter"), che la sola ricerca vettoriale tende a perdere
 - **FastEmbed locale** (`paraphrase-multilingual-MiniLM-L12-v2`, 384 dimensioni): multilingue e senza alcuna API esterna, il modello è già dentro l'immagine Docker
 - Tabella `knowledge_contents` per i metadati dei documenti
 
@@ -131,6 +131,8 @@ Ogni fonte salva la propria **versione/fingerprint** nei metadati, quindi una nu
 - salta i documenti invariati (`up to date`)
 - cancella i vecchi chunk e reinserisce quelli cambiati
 - aggiunge i nuovi file
+
+Le **descrizioni delle immagini** sono disattivate di default (`--with-images` per attivarle): sono centinaia di chunk molto generici che allungano l'ingestion e possono confondere la ricerca.
 
 ### 📄 Documentazione PDF locale (`wiki_update/`)
 
@@ -157,6 +159,7 @@ La cartella è montata nel container (`./wiki_update:/app/wiki_update:ro`), quin
 | `OPENCODE_BASE_URL` | ❌ | Base URL OpenAI-compatible (Go: `https://opencode.ai/inference/go/openai/v1`) |
 | `OPENCODE_SESSION_ID` | ❌ | Header `x-opencode-session` richiesto dal piano Go |
 | `OPENCODE_USER_AGENT` | ❌ | User-Agent "coding agent" richiesto dal piano Go |
+| `CHAT_REASONING_EFFORT` | ❌ | Ragionamento del modello in chat (`none` = più veloce) |
 | `VISION_MODEL` | ❌ | Modello per la descrizione delle immagini (default `deepseek-v4.1-flash`) |
 | `EMBEDDING_PROVIDER` | ❌ | `fastembed` (default, locale) oppure `openrouter` |
 | `EMBEDDING_MODEL` | ❌ | Modello di embedding locale multilingue |
@@ -298,6 +301,9 @@ docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest --force
 
 # Solo Confluence + PDF, senza il sito aziendale
 docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest --no-website
+
+# Aggiungi anche le descrizioni delle immagini del wiki (più lento)
+docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest --with-images
 
 # Ingerisci solo spazi specifici del wiki (salta sito)
 docker compose run --rm bot python -m wiki_assistant.ingest.run_ingest --spaces "GOLIT"
