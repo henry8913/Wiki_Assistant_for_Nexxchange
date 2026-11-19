@@ -4,6 +4,14 @@ on:
   push:
     branches: [ main ]
 
+# Un solo deploy alla volta: se arrivano più push ravvicinati i run restano in
+# coda invece di partire insieme (era la causa dei conflitti sui nomi dei
+# container). cancel-in-progress resta false per non interrompere un deploy
+# a metà.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -16,8 +24,19 @@ jobs:
           host: 158.180.235.83
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # La build può richiedere qualche minuto (immagine + modello locale).
+          command_timeout: 20m
           script: |
+            set -e
             cd /var/www/Wiki_Assistant_for_Nexxchange
             git pull origin main
-            docker compose up --build -d
+
+            # Rimuove eventuali container rimasti in stato "Created" da un
+            # deploy interrotto: occupano il nome e fanno fallire `up`.
+            docker ps -a \
+              --filter "status=created" \
+              --filter "name=wiki_assistant_for_nexxchange" \
+              --format '{{.ID}}' | xargs -r docker rm -f
+
+            docker compose up --build -d --remove-orphans
             echo "✅ Deploy completato"
