@@ -1,11 +1,17 @@
 import hashlib
 from pathlib import Path
 
+from agno.knowledge.chunking.document import DocumentChunking
 from agno.knowledge.reader.pdf_reader import PDFReader
 
 from wiki_assistant.knowledge import get_wiki_knowledge
 
 DEFAULT_DIR = Path("wiki_update")
+
+# Small chunks give sharper embeddings: a whole PDF page is a mix of topics and
+# its vector ends up matching nothing in particular.
+PDF_CHUNK_SIZE = 1500
+PDF_CHUNK_OVERLAP = 200
 
 
 def _file_hash(path: Path) -> str:
@@ -86,7 +92,12 @@ def ingest_local_pdfs(directory: Path = DEFAULT_DIR, force: bool = False) -> int
                     "file_hash": file_hash,
                     "title": pdf.stem,
                 },
-                reader=PDFReader(),
+                reader=PDFReader(
+                    chunking_strategy=DocumentChunking(
+                        chunk_size=PDF_CHUNK_SIZE,
+                        overlap=PDF_CHUNK_OVERLAP,
+                    )
+                ),
                 skip_if_exists=True,
             )
             inserted += 1

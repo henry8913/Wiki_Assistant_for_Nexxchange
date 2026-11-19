@@ -16,9 +16,9 @@ def get_wiki_knowledge() -> Knowledge:
 
         _wiki_knowledge = Knowledge(
             name="wiki_knowledge",
-            # Fewer chunks = less context = faster answers (the default is 10,
-            # which alone fills ~12k prompt tokens).
-            max_results=4,
+            # Fewer chunks = less context = faster answers. 6 keeps enough
+            # recall without filling the prompt with irrelevant pages.
+            max_results=6,
             vector_db=PgVector(
                 db_url=DATABASE_URL,
                 table_name="wiki_knowledge_vectors",
